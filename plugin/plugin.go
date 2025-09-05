@@ -4,7 +4,7 @@ import "github.com/Gthulhu/plugin/models"
 
 type Sched interface {
 	DequeueTask(task *models.QueuedTask)
-	SelectCPU(t *models.QueuedTask) (error, int32)
+	DefaultSelectCPU(t *models.QueuedTask) (error, int32)
 }
 
 type CustomScheduler interface {

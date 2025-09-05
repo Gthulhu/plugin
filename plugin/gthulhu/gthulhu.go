@@ -23,7 +23,7 @@ func (g *GthulhuPlugin) SelectQueuedTask(s plugin.Sched) *models.QueuedTask {
 }
 
 func (g *GthulhuPlugin) SelectCPU(s plugin.Sched, t *models.QueuedTask) (error, int32) {
-	return s.SelectCPU(t)
+	return s.DefaultSelectCPU(t)
 }
 
 func (g *GthulhuPlugin) DetermineTimeSlice(s plugin.Sched, t *models.QueuedTask) uint64 {
