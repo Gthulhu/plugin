@@ -97,7 +97,12 @@ func (c *JWTClient) requestToken() error {
 	if err != nil {
 		return fmt.Errorf("failed to send token request: %v", err)
 	}
-	defer resp.Body.Close()
+	defer func() {
+		err = resp.Body.Close()
+		if err != nil {
+			fmt.Printf("Body.Close() failed: %v", err)
+		}
+	}()
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {

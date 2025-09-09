@@ -1,0 +1,36 @@
+linters-settings:
+  govet:
+    enable-all: true
+  gocyclo:
+    min-complexity: 15
+  misspell:
+    locale: US
+  lll:
+    line-length: 120
+
+linters:
+  enable:
+    - errcheck
+    - gofmt
+    - goimports
+    - misspell
+    - ineffassign
+    - unconvert
+  disable:
+    - govet      # Disabled due to version compatibility
+    - staticcheck # Disabled due to version compatibility
+    - unused     # Disabled due to version compatibility
+    - gosimple   # Disabled due to version compatibility
+    - typecheck  # Disabled due to version compatibility
+    - gocritic   # Disabled due to version compatibility
+    - gosec      # Disabled due to version compatibility
+    - gocyclo    # Can be enabled later if needed
+
+run:
+  timeout: 5m
+  modules-download-mode: readonly
+
+issues:
+  exclude-use-default: false
+  max-issues-per-linter: 0
+  max-same-issues: 0

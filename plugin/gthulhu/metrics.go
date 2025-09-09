@@ -17,7 +17,7 @@ type BssData struct {
 	NrOnlineCpus       uint64 `json:"nr_online_cpus"`        // Number of online CPUs in the system
 	NrUserDispatches   uint64 `json:"nr_user_dispatches"`    // Number of user-space dispatches
 	NrKernelDispatches uint64 `json:"nr_kernel_dispatches"`  // Number of kernel-space dispatches
-	NrCancelDispatches uint64 `json:"nr_cancel_dispatches"`  // Number of cancelled dispatches
+	NrCancelDispatches uint64 `json:"nr_cancel_dispatches"`  // Number of canceled dispatches
 	NrBounceDispatches uint64 `json:"nr_bounce_dispatches"`  // Number of bounce dispatches
 	NrFailedDispatches uint64 `json:"nr_failed_dispatches"`  // Number of failed dispatches
 	NrSchedCongested   uint64 `json:"nr_sched_congested"`    // Number of times the scheduler was congested
@@ -65,7 +65,12 @@ func (c *MetricsClient) SendMetrics(data BssData) error {
 	if err != nil {
 		return fmt.Errorf("failed to send metrics request: %v", err)
 	}
-	defer resp.Body.Close()
+	defer func() {
+		err = resp.Body.Close()
+		if err != nil {
+			fmt.Printf("Body.Close() failed: %v", err)
+		}
+	}()
 
 	// Check response
 	if resp.StatusCode != 200 {
