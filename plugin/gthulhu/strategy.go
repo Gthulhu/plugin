@@ -53,7 +53,12 @@ func FetchSchedulingStrategies(apiUrl string) ([]SchedulingStrategy, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
+	defer func() {
+		err = resp.Body.Close()
+		if err != nil {
+			fmt.Printf("Body.Close() failed: %v", err)
+		}
+	}()
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
