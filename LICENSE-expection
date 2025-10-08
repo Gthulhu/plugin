@@ -1,0 +1,31 @@
+SPDX-Exception-Identifier: Gthulhu-plugin-exception
+SPDX-URL: https://github.com/Gthulhu/plugin/blob/main/LICENSE-expection
+SPDX-Licenses: Apache-2.0
+Usage-Guide:
+  This exception is used together with the Apache-2.0 license
+  to allow this plugin to be linked and used by GPL-licensed projects
+  (specifically Gthulhu/Gthulhu and Gthulhu/qumun) without
+  affecting the license terms of those projects.
+  To use this exception, the plugin may be incorporated into GPL projects
+  under the terms:
+    SPDX-License-Identifier: Apache-2.0 WITH Gthulhu-plugin-exception
+License-Text:
+
+   NOTE! This exception allows the plugin code licensed under Apache-2.0
+ to be used as a dependency or component within GPL-licensed projects
+ (Gthulhu/Gthulhu and Gthulhu/qumun) without creating license
+ compatibility issues.
+
+ This plugin is designed specifically to serve as a library/package for
+ the aforementioned GPL projects. The use of this plugin by those projects
+ does not affect their GPL licensing terms, nor does it require this plugin
+ to adopt GPL licensing.
+
+ This exception only applies to the integration and use of this plugin
+ within the specified GPL projects. Any other use or distribution of this
+ plugin remains subject to the terms of the Apache-2.0 license.
+
+ The plugin maintains its Apache-2.0 licensing independently and does not
+ incorporate any GPL-licensed code from the projects that use it.
+
+			Gthulhu Project Maintainers
