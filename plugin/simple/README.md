@@ -60,7 +60,7 @@ type SimplePlugin struct {
 Fully implements the `plugin.CustomScheduler` interface:
 - `DrainQueuedTask()` - Drain tasks from system queue to local pool
 - `SelectQueuedTask()` - Select next task for execution
-- `SelectCPU()` - Alway select any CPU (returns 1<<20)
+- `SelectCPU()` - Always select any CPU (returns 1<<20)
 - `DetermineTimeSlice()` - Return fixed 5ms time slice
 - `GetPoolCount()` - Return current task pool size
 
