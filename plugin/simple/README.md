@@ -49,7 +49,7 @@ graph TB
         end
         
         subgraph "Task Pool Management"
-            TP[taskPool: []Task]
+            TP[taskPool: slice of Task]
             VT[vtimeNow: uint64]
         end
         
