@@ -37,16 +37,200 @@ The Simple Scheduler Plugin implements a lightweight, high-performance task sche
 
 ## Architecture
 
+### System Overview
+
+```mermaid
+graph TB
+    subgraph "Simple Scheduler Plugin"
+        SP[SimplePlugin Instance]
+        subgraph "Configuration"
+            FM[fifoMode: bool]
+            SD[sliceDefault: 5ms]
+        end
+        
+        subgraph "Task Pool Management"
+            TP[taskPool: []Task]
+            VT[vtimeNow: uint64]
+        end
+        
+        subgraph "Statistics"
+            LC[localQueueCount]
+            GC[globalQueueCount]
+        end
+    end
+    
+    subgraph "External Interfaces"
+        SCHED[System Scheduler]
+        EBPF[eBPF Queue]
+        CPU[CPU Assignment]
+    end
+    
+    subgraph "Scheduling Flow"
+        DRAIN[DrainQueuedTask]
+        SELECT[SelectQueuedTask]
+        SELECTCPU[SelectCPU]
+        TIMESLICE[DetermineTimeSlice]
+    end
+    
+    EBPF -->|DequeueTask| DRAIN
+    DRAIN -->|Insert Tasks| TP
+    TP -->|Get Next Task| SELECT
+    SELECT -->|Task Ready| SELECTCPU
+    SELECTCPU -->|CPU Selected| SCHED
+    TIMESLICE -->|5ms Slice| SCHED
+    
+    SP --> FM
+    SP --> SD
+    SP --> TP
+    SP --> VT
+    SP --> LC
+    SP --> GC
+    
+    classDef plugin fill:#e1f5fe
+    classDef external fill:#fff3e0
+    classDef flow fill:#f3e5f5
+    
+    class SP,FM,SD,TP,VT,LC,GC plugin
+    class SCHED,EBPF,CPU external
+    class DRAIN,SELECT,SELECTCPU,TIMESLICE flow
+```
+
+### Scheduling Mode Comparison
+
+```mermaid
+graph LR
+    subgraph "Weighted VTime Mode"
+        WT1[Task A: vtime=100, weight=100]
+        WT2[Task B: vtime=50, weight=150] 
+        WT3[Task C: vtime=200, weight=80]
+        
+        WT2 -->|Lowest vtime| NEXT1[Selected First]
+        WT1 -->|Medium vtime| NEXT2[Selected Second]
+        WT3 -->|Highest vtime| NEXT3[Selected Last]
+    end
+    
+    subgraph "FIFO Mode"
+        FT1[Task A: arrives first]
+        FT2[Task B: arrives second]
+        FT3[Task C: arrives third]
+        
+        FT1 -->|First in| FNEXT1[Selected First]
+        FT2 -->|Second in| FNEXT2[Selected Second]
+        FT3 -->|Third in| FNEXT3[Selected Last]
+    end
+    
+    classDef vtime fill:#e8f5e8
+    classDef fifo fill:#ffe8e8
+    classDef selected fill:#e8e8ff
+    
+    class WT1,WT2,WT3 vtime
+    class FT1,FT2,FT3 fifo
+    class NEXT1,NEXT2,NEXT3,FNEXT1,FNEXT2,FNEXT3 selected
+```
+
+### Task Processing Pipeline
+
+```mermaid
+sequenceDiagram
+    participant SYS as System Scheduler
+    participant SP as SimplePlugin
+    participant TP as Task Pool
+    participant CPU as CPU Manager
+    
+    Note over SYS,CPU: Task Scheduling Cycle
+    
+    SYS->>SP: DrainQueuedTask()
+    SP->>SYS: DequeueTask()
+    SYS-->>SP: Task Data
+    
+    alt Valid Task (PID > 0)
+        SP->>SP: Validate & Process Task
+        alt FIFO Mode
+            SP->>TP: Append to end
+        else VTime Mode
+            SP->>SP: Calculate vtime
+            SP->>TP: Insert by vtime order
+        end
+    else Invalid Task
+        SP->>SP: Skip task
+    end
+    
+    SYS->>SP: SelectQueuedTask()
+    SP->>TP: Get next task
+    TP-->>SP: Return task
+    
+    alt Valid Task Found
+        SP->>SP: Update vtime (if vtime mode)
+        SP-->>SYS: Return task
+        
+        SYS->>SP: SelectCPU(task)
+        SP->>SYS: DefaultSelectCPU(task)
+        SYS-->>SP: Selected CPU
+        SP-->>SYS: CPU Assignment
+        
+        SYS->>SP: DetermineTimeSlice(task)
+        SP-->>SYS: 5ms time slice
+        
+        SYS->>CPU: Dispatch task
+    else No Valid Task
+        SP-->>SYS: nil
+    end
+```
+
 ### Core Components
 
 ```go
 type SimplePlugin struct {
     fifoMode     bool     // Scheduling mode flag
     sliceDefault uint64   // Default time slice (5ms)
-    taskPool     []Task   // Circular buffer for tasks
+    taskPool     []Task   // Dynamic slice for tasks
     vtimeNow     uint64   // Global virtual time tracker
     // Statistics and pool management fields...
 }
+```
+
+### Error Handling & Recovery
+
+```mermaid
+flowchart TD
+    START[Task Processing Start]
+    DRAIN[DrainQueuedTask Called]
+    
+    DRAIN --> CHECK_PID{PID > 0?}
+    CHECK_PID -->|No| SKIP[Skip Invalid Task]
+    CHECK_PID -->|Yes| CHECK_DUP{Duplicate Task?}
+    
+    CHECK_DUP -->|Yes| REJECT[Reject Duplicate]
+    CHECK_DUP -->|No| CHECK_VTIME{VTime = 0?}
+    
+    CHECK_VTIME -->|Yes| FIX_VTIME[Set VTime = 1]
+    CHECK_VTIME -->|No| INSERT[Insert to Pool]
+    FIX_VTIME --> INSERT
+    
+    INSERT --> CHECK_POOL{Pool > 4096?}
+    CHECK_POOL -->|Yes| CLEANUP[ClearInvalidTasks]
+    CHECK_POOL -->|No| SUCCESS[Task Added]
+    
+    CLEANUP --> COMPACT[Compact Valid Tasks]
+    COMPACT --> SUCCESS
+    
+    SKIP --> DRAIN
+    REJECT --> DRAIN
+    SUCCESS --> SELECT[SelectQueuedTask]
+    
+    SELECT --> VALIDATE{Valid Task?}
+    VALIDATE -->|No| RETURN_NIL[Return nil]
+    VALIDATE -->|Yes| UPDATE_VTIME[Update Global VTime]
+    
+    UPDATE_VTIME --> RETURN_TASK[Return Task]
+    
+    classDef error fill:#ffebee
+    classDef success fill:#e8f5e8
+    classDef process fill:#e3f2fd
+    
+    class SKIP,REJECT,RETURN_NIL error
+    class SUCCESS,RETURN_TASK success
+    class DRAIN,INSERT,SELECT,UPDATE_VTIME process
 ```
 
 ### Task Management
@@ -55,6 +239,7 @@ type SimplePlugin struct {
   - FIFO mode: Append to end of slice
   - Weighted vtime mode: Insert in vtime-sorted order using slice operations
 - **Selection Logic**: Always select from front of slice
+- **Error Recovery**: Automatic cleanup of invalid tasks and duplicate prevention
 
 ### Interface Compliance
 Fully implements the `plugin.CustomScheduler` interface:
