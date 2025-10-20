@@ -124,3 +124,101 @@ flowchart TD
 
 The plugin architecture allows custom scheduler implementations to override default behavior while maintaining compatibility with the core Gthulhu scheduler framework.
 
+## Factory Pattern
+
+This repository implements a factory pattern for plugin creation, allowing dynamic plugin registration and instantiation without hardcoded switch-case logic in the Gthulhu main repository.
+
+### Quick Start
+
+```go
+import (
+    "github.com/Gthulhu/plugin/plugin"
+    // Import plugins to trigger registration
+    _ "github.com/Gthulhu/plugin/plugin/gthulhu"
+    _ "github.com/Gthulhu/plugin/plugin/simple"
+)
+
+// Create a scheduler plugin using the factory
+config := &plugin.SchedConfig{
+    Mode:           "gthulhu",
+    SliceNsDefault: 5000 * 1000,  // 5ms
+    SliceNsMin:     500 * 1000,   // 0.5ms
+}
+
+scheduler, err := plugin.NewSchedulerPlugin(config)
+if err != nil {
+    log.Fatalf("Failed to create plugin: %v", err)
+}
+
+// Use the scheduler
+scheduler.DrainQueuedTask(sched)
+```
+
+### Available Plugins
+
+| Mode | Description |
+|------|-------------|
+| `gthulhu` | Advanced scheduler with API integration and scheduling strategies |
+| `simple` | Simple weighted vtime scheduler |
+| `simple-fifo` | Simple FIFO scheduler |
+
+### Configuration
+
+The `SchedConfig` struct holds all configuration parameters:
+
+```go
+type SchedConfig struct {
+    Mode           string  // Plugin mode to use
+    SliceNsDefault uint64  // Default time slice in nanoseconds
+    SliceNsMin     uint64  // Minimum time slice in nanoseconds
+    FifoMode       bool    // Enable FIFO mode for simple plugin
+    
+    // Scheduler configuration (for Gthulhu plugin)
+    Scheduler struct {
+        SliceNsDefault uint64
+        SliceNsMin     uint64
+    }
+    
+    // API configuration (for Gthulhu plugin)
+    APIConfig struct {
+        PublicKeyPath string
+        BaseURL       string
+    }
+}
+```
+
+### Creating New Plugins
+
+To add a new plugin:
+
+1. Implement the `CustomScheduler` interface
+2. Register your plugin in `init()`:
+
+```go
+func init() {
+    plugin.RegisterNewPlugin("myplugin", func(config *plugin.SchedConfig) (plugin.CustomScheduler, error) {
+        return NewMyPlugin(config), nil
+    })
+}
+```
+
+3. Import your plugin package to trigger registration
+
+For detailed documentation, see [FACTORY_PATTERN.md](./FACTORY_PATTERN.md).
+
+## Testing
+
+Run tests with coverage:
+
+```bash
+# Run all tests
+go test ./... -v
+
+# Check coverage
+go test ./... -coverprofile=coverage.out
+go tool cover -func=coverage.out
+
+# View coverage in browser
+go tool cover -html=coverage.out
+```
+
