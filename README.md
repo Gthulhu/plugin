@@ -204,8 +204,6 @@ func init() {
 
 3. Import your plugin package to trigger registration
 
-For detailed documentation, see [FACTORY_PATTERN.md](./FACTORY_PATTERN.md).
-
 ## Testing
 
 Run tests with coverage:
