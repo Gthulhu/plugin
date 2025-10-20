@@ -201,9 +201,9 @@ func TestGetRegisteredModes(t *testing.T) {
 			return &mockScheduler{}, nil
 		}
 
-		RegisterNewPlugin("mode1", factory)
-		RegisterNewPlugin("mode2", factory)
-		RegisterNewPlugin("mode3", factory)
+		_ = RegisterNewPlugin("mode1", factory)
+		_ = RegisterNewPlugin("mode2", factory)
+		_ = RegisterNewPlugin("mode3", factory)
 
 		modes := GetRegisteredModes()
 		if len(modes) != 3 {
