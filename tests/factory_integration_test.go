@@ -5,6 +5,7 @@ import (
 
 	"github.com/Gthulhu/plugin/models"
 	"github.com/Gthulhu/plugin/plugin"
+
 	// Import plugin packages to trigger init() functions
 	_ "github.com/Gthulhu/plugin/plugin/gthulhu"
 	_ "github.com/Gthulhu/plugin/plugin/simple"

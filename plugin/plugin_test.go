@@ -292,7 +292,7 @@ func TestConcurrentRegistration(t *testing.T) {
 	for i := 0; i < 10; i++ {
 		go func(id int) {
 			mode := "concurrent-mode-" + string(rune('0'+id))
-			RegisterNewPlugin(mode, factory)
+			_ = RegisterNewPlugin(mode, factory)
 			done <- true
 		}(i)
 	}
@@ -331,7 +331,7 @@ func TestFactoryWithConfigParameters(t *testing.T) {
 		return &mockScheduler{}, nil
 	}
 
-	RegisterNewPlugin("config-test", factory)
+	_ = RegisterNewPlugin("config-test", factory)
 
 	config := &SchedConfig{
 		Mode:           "config-test",

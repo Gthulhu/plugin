@@ -7,7 +7,7 @@ import (
 
 func init() {
 	// Register the simple plugin with weighted vtime mode
-	plugin.RegisterNewPlugin("simple", func(config *plugin.SchedConfig) (plugin.CustomScheduler, error) {
+	err := plugin.RegisterNewPlugin("simple", func(config *plugin.SchedConfig) (plugin.CustomScheduler, error) {
 		simplePlugin := NewSimplePlugin(false) // weighted vtime mode
 
 		if config.SliceNsDefault > 0 {
@@ -16,9 +16,12 @@ func init() {
 
 		return simplePlugin, nil
 	})
+	if err != nil {
+		panic(err)
+	}
 
 	// Register the simple plugin with FIFO mode
-	plugin.RegisterNewPlugin("simple-fifo", func(config *plugin.SchedConfig) (plugin.CustomScheduler, error) {
+	err = plugin.RegisterNewPlugin("simple-fifo", func(config *plugin.SchedConfig) (plugin.CustomScheduler, error) {
 		simplePlugin := NewSimplePlugin(true) // FIFO mode
 
 		if config.SliceNsDefault > 0 {
@@ -27,6 +30,9 @@ func init() {
 
 		return simplePlugin, nil
 	})
+	if err != nil {
+		panic(err)
+	}
 }
 
 // SimplePlugin implements a basic scheduler that can operate in two modes:
