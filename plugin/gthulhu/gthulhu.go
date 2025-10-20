@@ -5,6 +5,40 @@ import (
 	"github.com/Gthulhu/plugin/plugin"
 )
 
+func init() {
+	// Register the gthulhu plugin with the factory
+	plugin.RegisterNewPlugin("gthulhu", func(config *plugin.SchedConfig) (plugin.CustomScheduler, error) {
+		// Use Scheduler config if available, otherwise use SimpleScheduler config
+		sliceNsDefault := config.Scheduler.SliceNsDefault
+		sliceNsMin := config.Scheduler.SliceNsMin
+
+		if sliceNsDefault == 0 && config.SliceNsDefault > 0 {
+			sliceNsDefault = config.SliceNsDefault
+		}
+		if sliceNsMin == 0 && config.SliceNsMin > 0 {
+			sliceNsMin = config.SliceNsMin
+		}
+
+		gthulhuPlugin := NewGthulhuPlugin(sliceNsDefault, sliceNsMin)
+
+		// Initialize JWT client if API config is provided
+		if config.APIConfig.PublicKeyPath != "" && config.APIConfig.BaseURL != "" {
+			err := gthulhuPlugin.InitJWTClient(config.APIConfig.PublicKeyPath, config.APIConfig.BaseURL)
+			if err != nil {
+				return nil, err
+			}
+
+			// Initialize metrics client
+			err = gthulhuPlugin.InitMetricsClient(config.APIConfig.BaseURL)
+			if err != nil {
+				return nil, err
+			}
+		}
+
+		return gthulhuPlugin, nil
+	})
+}
+
 type GthulhuPlugin struct {
 	// Scheduler configuration
 	sliceNsDefault uint64

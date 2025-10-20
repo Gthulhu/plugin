@@ -5,6 +5,30 @@ import (
 	"github.com/Gthulhu/plugin/plugin"
 )
 
+func init() {
+	// Register the simple plugin with weighted vtime mode
+	plugin.RegisterNewPlugin("simple", func(config *plugin.SchedConfig) (plugin.CustomScheduler, error) {
+		simplePlugin := NewSimplePlugin(false) // weighted vtime mode
+
+		if config.SliceNsDefault > 0 {
+			simplePlugin.SetSliceDefault(config.SliceNsDefault)
+		}
+
+		return simplePlugin, nil
+	})
+
+	// Register the simple plugin with FIFO mode
+	plugin.RegisterNewPlugin("simple-fifo", func(config *plugin.SchedConfig) (plugin.CustomScheduler, error) {
+		simplePlugin := NewSimplePlugin(true) // FIFO mode
+
+		if config.SliceNsDefault > 0 {
+			simplePlugin.SetSliceDefault(config.SliceNsDefault)
+		}
+
+		return simplePlugin, nil
+	})
+}
+
 // SimplePlugin implements a basic scheduler that can operate in two modes:
 // 1. Weighted vtime scheduling (default)
 // 2. FIFO scheduling
