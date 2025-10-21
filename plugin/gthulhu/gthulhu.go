@@ -2,6 +2,7 @@ package gthulhu
 
 import (
 	"context"
+	"log"
 	"time"
 
 	"github.com/Gthulhu/plugin/models"
@@ -93,6 +94,20 @@ func NewGthulhuPlugin(sliceNsDefault, sliceNsMin uint64) *GthulhuPlugin {
 }
 
 var _ reg.CustomScheduler = (*GthulhuPlugin)(nil)
+
+func (g *GthulhuPlugin) SendMetrics(data interface{}) {
+	if g.metricsClient != nil {
+		if bssData, ok := data.(BssData); ok {
+			err := g.metricsClient.SendMetrics(bssData)
+			if err != nil {
+				// Log the error but do not disrupt scheduling
+				log.Printf("Failed to send metrics: %v", err)
+			}
+		} else {
+			log.Printf("Invalid metrics data type: %T", data)
+		}
+	}
+}
 
 func (g *GthulhuPlugin) DrainQueuedTask(s reg.Sched) int {
 	return g.drainQueuedTask(s)

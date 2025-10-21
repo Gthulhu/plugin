@@ -83,6 +83,8 @@ func (s *SimplePlugin) SetSliceDefault(slice uint64) {
 	s.sliceDefault = slice
 }
 
+func (s *SimplePlugin) SendMetrics(data interface{}) {}
+
 // Verify that SimplePlugin implements the plugin.CustomScheduler interface
 var _ reg.CustomScheduler = (*SimplePlugin)(nil)
 

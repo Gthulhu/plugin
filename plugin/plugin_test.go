@@ -2,6 +2,7 @@ package plugin
 
 import (
 	"context"
+	"log"
 	"testing"
 
 	"github.com/Gthulhu/plugin/models"
@@ -333,6 +334,11 @@ func TestFactoryWithConfigParameters(t *testing.T) {
 // mockScheduler is a mock implementation of CustomScheduler for testing
 type mockScheduler struct {
 	mode string
+}
+
+func (m *mockScheduler) SendMetrics(data interface{}) {
+	// Mock implementation: just log the data
+	log.Printf("Sending metrics: %+v", data)
 }
 
 func (m *mockScheduler) DrainQueuedTask(s Sched) int {

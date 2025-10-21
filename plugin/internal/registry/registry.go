@@ -25,6 +25,8 @@ type CustomScheduler interface {
 	// Get the number of objects in the pool (waiting to be dispatched)
 	// GetPoolCount will be called by the scheduler to notify the number of tasks waiting to be dispatched (NotifyComplete)
 	GetPoolCount() uint64
+	// SendMetrics sends custom metrics to the monitoring system
+	SendMetrics(interface{})
 }
 
 type Scheduler struct {
