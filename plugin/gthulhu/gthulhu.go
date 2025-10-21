@@ -5,12 +5,12 @@ import (
 	"time"
 
 	"github.com/Gthulhu/plugin/models"
-	"github.com/Gthulhu/plugin/plugin"
+	reg "github.com/Gthulhu/plugin/plugin/internal/registry"
 )
 
 func init() {
 	// Register the gthulhu plugin with the factory
-	err := plugin.RegisterNewPlugin("gthulhu", func(ctx context.Context, config *plugin.SchedConfig) (plugin.CustomScheduler, error) {
+	err := reg.RegisterNewPlugin("gthulhu", func(ctx context.Context, config *reg.SchedConfig) (reg.CustomScheduler, error) {
 		// Use Scheduler config if available, otherwise use SimpleScheduler config
 		sliceNsDefault := config.Scheduler.SliceNsDefault
 		sliceNsMin := config.Scheduler.SliceNsMin
@@ -37,7 +37,7 @@ func init() {
 				return nil, err
 			}
 		}
-		gthulhuPlugin.StartStrategyFetcher(context.TODO(), config.APIConfig.BaseURL, time.Duration(config.APIConfig.Interval)*time.Second)
+		gthulhuPlugin.StartStrategyFetcher(ctx, config.APIConfig.BaseURL, time.Duration(config.APIConfig.Interval)*time.Second)
 		return gthulhuPlugin, nil
 	})
 	if err != nil {
@@ -92,21 +92,21 @@ func NewGthulhuPlugin(sliceNsDefault, sliceNsMin uint64) *GthulhuPlugin {
 	return plugin
 }
 
-var _ plugin.CustomScheduler = (*GthulhuPlugin)(nil)
+var _ reg.CustomScheduler = (*GthulhuPlugin)(nil)
 
-func (g *GthulhuPlugin) DrainQueuedTask(s plugin.Sched) int {
+func (g *GthulhuPlugin) DrainQueuedTask(s reg.Sched) int {
 	return g.drainQueuedTask(s)
 }
 
-func (g *GthulhuPlugin) SelectQueuedTask(s plugin.Sched) *models.QueuedTask {
+func (g *GthulhuPlugin) SelectQueuedTask(s reg.Sched) *models.QueuedTask {
 	return g.getTaskFromPool()
 }
 
-func (g *GthulhuPlugin) SelectCPU(s plugin.Sched, t *models.QueuedTask) (error, int32) {
+func (g *GthulhuPlugin) SelectCPU(s reg.Sched, t *models.QueuedTask) (error, int32) {
 	return s.DefaultSelectCPU(t)
 }
 
-func (g *GthulhuPlugin) DetermineTimeSlice(s plugin.Sched, t *models.QueuedTask) uint64 {
+func (g *GthulhuPlugin) DetermineTimeSlice(s reg.Sched, t *models.QueuedTask) uint64 {
 	return g.getTaskExecutionTime(t.Pid)
 }
 
@@ -115,7 +115,7 @@ func (g *GthulhuPlugin) GetPoolCount() uint64 {
 }
 
 // drainQueuedTask drains tasks from the scheduler queue into the task pool
-func (g *GthulhuPlugin) drainQueuedTask(s plugin.Sched) int {
+func (g *GthulhuPlugin) drainQueuedTask(s reg.Sched) int {
 	var count int
 	for (g.taskPoolTail+1)%taskPoolSize != g.taskPoolHead {
 		var newQueuedTask models.QueuedTask

@@ -4,7 +4,7 @@ import (
 	"testing"
 
 	"github.com/Gthulhu/plugin/models"
-	"github.com/Gthulhu/plugin/plugin"
+	reg "github.com/Gthulhu/plugin/plugin/internal/registry"
 )
 
 // TestGthulhuPluginInstanceIsolation verifies that multiple GthulhuPlugin instances maintain independent state
@@ -151,8 +151,8 @@ type MockScheduler struct {
 	selectCPUCall int
 }
 
-// Compile-time check that MockScheduler implements plugin.Sched
-var _ plugin.Sched = (*MockScheduler)(nil)
+// Compile-time check that MockScheduler implements reg.Sched
+var _ reg.Sched = (*MockScheduler)(nil)
 
 // NewMockScheduler creates a new mock scheduler for testing
 func NewMockScheduler() *MockScheduler {

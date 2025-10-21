@@ -4,12 +4,12 @@ import (
 	"context"
 
 	"github.com/Gthulhu/plugin/models"
-	"github.com/Gthulhu/plugin/plugin"
+	reg "github.com/Gthulhu/plugin/plugin/internal/registry"
 )
 
 func init() {
 	// Register the simple plugin with weighted vtime mode
-	err := plugin.RegisterNewPlugin("simple", func(ctx context.Context, config *plugin.SchedConfig) (plugin.CustomScheduler, error) {
+	err := reg.RegisterNewPlugin("simple", func(ctx context.Context, config *reg.SchedConfig) (reg.CustomScheduler, error) {
 		simplePlugin := NewSimplePlugin(false) // weighted vtime mode
 
 		if config.Scheduler.SliceNsDefault > 0 {
@@ -23,7 +23,7 @@ func init() {
 	}
 
 	// Register the simple plugin with FIFO mode
-	err = plugin.RegisterNewPlugin("simple-fifo", func(ctx context.Context, config *plugin.SchedConfig) (plugin.CustomScheduler, error) {
+	err = reg.RegisterNewPlugin("simple-fifo", func(ctx context.Context, config *reg.SchedConfig) (reg.CustomScheduler, error) {
 		simplePlugin := NewSimplePlugin(true) // FIFO mode
 
 		if config.Scheduler.SliceNsDefault > 0 {
@@ -84,10 +84,10 @@ func (s *SimplePlugin) SetSliceDefault(slice uint64) {
 }
 
 // Verify that SimplePlugin implements the plugin.CustomScheduler interface
-var _ plugin.CustomScheduler = (*SimplePlugin)(nil)
+var _ reg.CustomScheduler = (*SimplePlugin)(nil)
 
 // DrainQueuedTask drains tasks from the scheduler queue into the task pool
-func (s *SimplePlugin) DrainQueuedTask(sched plugin.Sched) int {
+func (s *SimplePlugin) DrainQueuedTask(sched reg.Sched) int {
 	count := 0
 
 	// Keep draining until the pool is full or no more tasks available
@@ -111,17 +111,17 @@ func (s *SimplePlugin) DrainQueuedTask(sched plugin.Sched) int {
 }
 
 // SelectQueuedTask selects and returns the next task to be scheduled
-func (s *SimplePlugin) SelectQueuedTask(sched plugin.Sched) *models.QueuedTask {
+func (s *SimplePlugin) SelectQueuedTask(sched reg.Sched) *models.QueuedTask {
 	return s.getTaskFromPool()
 }
 
 // SelectCPU selects a CPU for the given task
-func (s *SimplePlugin) SelectCPU(sched plugin.Sched, task *models.QueuedTask) (error, int32) {
+func (s *SimplePlugin) SelectCPU(sched reg.Sched, task *models.QueuedTask) (error, int32) {
 	return nil, 1 << 20
 }
 
 // DetermineTimeSlice determines the time slice for the given task
-func (s *SimplePlugin) DetermineTimeSlice(sched plugin.Sched, task *models.QueuedTask) uint64 {
+func (s *SimplePlugin) DetermineTimeSlice(sched reg.Sched, task *models.QueuedTask) uint64 {
 	// Always return default slice
 	return s.sliceDefault
 }

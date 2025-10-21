@@ -10,23 +10,17 @@ import (
 // TestRegisterNewPlugin tests the plugin registration functionality
 func TestRegisterNewPlugin(t *testing.T) {
 	// Clear registry for testing
-	registryMutex.Lock()
-	originalRegistry := pluginRegistry
-	pluginRegistry = make(map[string]PluginFactory)
-	registryMutex.Unlock()
+	originalRegistry := snapshotRegistryForTests()
+	clearRegistryForTests()
 
 	// Restore original registry after test
 	defer func() {
-		registryMutex.Lock()
-		pluginRegistry = originalRegistry
-		registryMutex.Unlock()
+		restoreRegistryForTests(originalRegistry)
 	}()
 
 	t.Run("SuccessfulRegistration", func(t *testing.T) {
 		// Clear for this subtest
-		registryMutex.Lock()
-		pluginRegistry = make(map[string]PluginFactory)
-		registryMutex.Unlock()
+		clearRegistryForTests()
 
 		factory := func(ctx context.Context, config *SchedConfig) (CustomScheduler, error) {
 			return &mockScheduler{}, nil
@@ -70,9 +64,7 @@ func TestRegisterNewPlugin(t *testing.T) {
 
 	t.Run("DuplicateRegistrationError", func(t *testing.T) {
 		// Clear for this subtest
-		registryMutex.Lock()
-		pluginRegistry = make(map[string]PluginFactory)
-		registryMutex.Unlock()
+		clearRegistryForTests()
 
 		factory := func(ctx context.Context, config *SchedConfig) (CustomScheduler, error) {
 			return &mockScheduler{}, nil
@@ -98,16 +90,12 @@ func TestRegisterNewPlugin(t *testing.T) {
 // TestNewSchedulerPlugin tests the factory function
 func TestNewSchedulerPlugin(t *testing.T) {
 	// Clear registry for testing
-	registryMutex.Lock()
-	originalRegistry := pluginRegistry
-	pluginRegistry = make(map[string]PluginFactory)
-	registryMutex.Unlock()
+	originalRegistry := snapshotRegistryForTests()
+	clearRegistryForTests()
 
 	// Restore original registry after test
 	defer func() {
-		registryMutex.Lock()
-		pluginRegistry = originalRegistry
-		registryMutex.Unlock()
+		restoreRegistryForTests(originalRegistry)
 	}()
 
 	t.Run("NilConfigError", func(t *testing.T) {
@@ -133,9 +121,7 @@ func TestNewSchedulerPlugin(t *testing.T) {
 
 	t.Run("SuccessfulPluginCreation", func(t *testing.T) {
 		// Clear and register a test plugin
-		registryMutex.Lock()
-		pluginRegistry = make(map[string]PluginFactory)
-		registryMutex.Unlock()
+		clearRegistryForTests()
 
 		factory := func(ctx context.Context, config *SchedConfig) (CustomScheduler, error) {
 			return &mockScheduler{mode: config.Mode}, nil
@@ -168,23 +154,17 @@ func TestNewSchedulerPlugin(t *testing.T) {
 // TestGetRegisteredModes tests retrieving all registered modes
 func TestGetRegisteredModes(t *testing.T) {
 	// Clear registry for testing
-	registryMutex.Lock()
-	originalRegistry := pluginRegistry
-	pluginRegistry = make(map[string]PluginFactory)
-	registryMutex.Unlock()
+	originalRegistry := snapshotRegistryForTests()
+	clearRegistryForTests()
 
 	// Restore original registry after test
 	defer func() {
-		registryMutex.Lock()
-		pluginRegistry = originalRegistry
-		registryMutex.Unlock()
+		restoreRegistryForTests(originalRegistry)
 	}()
 
 	t.Run("EmptyRegistry", func(t *testing.T) {
 		// Clear registry
-		registryMutex.Lock()
-		pluginRegistry = make(map[string]PluginFactory)
-		registryMutex.Unlock()
+		clearRegistryForTests()
 
 		modes := GetRegisteredModes()
 		if len(modes) != 0 {
@@ -194,9 +174,7 @@ func TestGetRegisteredModes(t *testing.T) {
 
 	t.Run("MultipleModes", func(t *testing.T) {
 		// Clear and register multiple plugins
-		registryMutex.Lock()
-		pluginRegistry = make(map[string]PluginFactory)
-		registryMutex.Unlock()
+		clearRegistryForTests()
 
 		factory := func(ctx context.Context, config *SchedConfig) (CustomScheduler, error) {
 			return &mockScheduler{}, nil
@@ -271,16 +249,12 @@ func TestSchedConfigStructure(t *testing.T) {
 // TestConcurrentRegistration tests thread-safety of plugin registration
 func TestConcurrentRegistration(t *testing.T) {
 	// Clear registry for testing
-	registryMutex.Lock()
-	originalRegistry := pluginRegistry
-	pluginRegistry = make(map[string]PluginFactory)
-	registryMutex.Unlock()
+	originalRegistry := snapshotRegistryForTests()
+	clearRegistryForTests()
 
 	// Restore original registry after test
 	defer func() {
-		registryMutex.Lock()
-		pluginRegistry = originalRegistry
-		registryMutex.Unlock()
+		restoreRegistryForTests(originalRegistry)
 	}()
 
 	factory := func(ctx context.Context, config *SchedConfig) (CustomScheduler, error) {
@@ -312,16 +286,12 @@ func TestConcurrentRegistration(t *testing.T) {
 // TestFactoryWithConfigParameters tests that config parameters are passed correctly
 func TestFactoryWithConfigParameters(t *testing.T) {
 	// Clear registry for testing
-	registryMutex.Lock()
-	originalRegistry := pluginRegistry
-	pluginRegistry = make(map[string]PluginFactory)
-	registryMutex.Unlock()
+	originalRegistry := snapshotRegistryForTests()
+	clearRegistryForTests()
 
 	// Restore original registry after test
 	defer func() {
-		registryMutex.Lock()
-		pluginRegistry = originalRegistry
-		registryMutex.Unlock()
+		restoreRegistryForTests(originalRegistry)
 	}()
 
 	// Register a plugin that captures config

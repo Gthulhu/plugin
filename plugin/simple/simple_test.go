@@ -4,7 +4,7 @@ import (
 	"testing"
 
 	"github.com/Gthulhu/plugin/models"
-	"github.com/Gthulhu/plugin/plugin"
+	reg "github.com/Gthulhu/plugin/plugin/internal/registry"
 )
 
 // TestSimplePluginInstanceIsolation verifies that multiple SimplePlugin instances maintain independent state
@@ -121,7 +121,7 @@ type MockScheduler struct {
 }
 
 // Compile-time check that MockScheduler implements plugin.Sched
-var _ plugin.Sched = (*MockScheduler)(nil)
+var _ reg.Sched = (*MockScheduler)(nil)
 
 // NewMockScheduler creates a new mock scheduler for testing
 func NewMockScheduler() *MockScheduler {
