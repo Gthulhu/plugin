@@ -26,28 +26,28 @@ type CustomScheduler interface {
 	GetPoolCount() uint64
 }
 
+type Scheduler struct {
+	SliceNsDefault uint64 `yaml:"slice_ns_default"`
+	SliceNsMin     uint64 `yaml:"slice_ns_min"`
+}
+
+type APIConfig struct {
+	PublicKeyPath string `yaml:"public_key_path"`
+	BaseURL       string `yaml:"base_url"`
+	Interval      int    `yaml:"interval"`
+}
+
 // SchedConfig holds the configuration parameters for creating a scheduler plugin
 type SchedConfig struct {
 	// Mode specifies which scheduler plugin to use (e.g., "gthulhu", "simple", "simple-fifo")
 	Mode string `yaml:"mode"`
 
-	// SimpleScheduler configuration
-	SliceNsDefault uint64 `yaml:"slice_ns_default"`
-	SliceNsMin     uint64 `yaml:"slice_ns_min"`
-	FifoMode       bool   `yaml:"fifo_mode"`
-
 	// Scheduler configuration (for Gthulhu plugin)
 	// These match the parameters that would be passed from the Gthulhu main repo
-	Scheduler struct {
-		SliceNsDefault uint64 `yaml:"slice_ns_default"`
-		SliceNsMin     uint64 `yaml:"slice_ns_min"`
-	} `yaml:"scheduler"`
+	Scheduler Scheduler `yaml:"scheduler"`
 
 	// API configuration
-	APIConfig struct {
-		PublicKeyPath string `yaml:"public_key_path"`
-		BaseURL       string `yaml:"base_url"`
-	} `yaml:"api_config"`
+	APIConfig APIConfig `yaml:"api_config"`
 }
 
 // PluginFactory is a function type that creates a CustomScheduler instance

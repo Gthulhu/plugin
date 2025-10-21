@@ -10,8 +10,8 @@ func init() {
 	err := plugin.RegisterNewPlugin("simple", func(config *plugin.SchedConfig) (plugin.CustomScheduler, error) {
 		simplePlugin := NewSimplePlugin(false) // weighted vtime mode
 
-		if config.SliceNsDefault > 0 {
-			simplePlugin.SetSliceDefault(config.SliceNsDefault)
+		if config.Scheduler.SliceNsDefault > 0 {
+			simplePlugin.SetSliceDefault(config.Scheduler.SliceNsDefault)
 		}
 
 		return simplePlugin, nil
@@ -24,8 +24,8 @@ func init() {
 	err = plugin.RegisterNewPlugin("simple-fifo", func(config *plugin.SchedConfig) (plugin.CustomScheduler, error) {
 		simplePlugin := NewSimplePlugin(true) // FIFO mode
 
-		if config.SliceNsDefault > 0 {
-			simplePlugin.SetSliceDefault(config.SliceNsDefault)
+		if config.Scheduler.SliceNsDefault > 0 {
+			simplePlugin.SetSliceDefault(config.Scheduler.SliceNsDefault)
 		}
 
 		return simplePlugin, nil

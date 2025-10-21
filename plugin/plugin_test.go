@@ -229,25 +229,24 @@ func TestGetRegisteredModes(t *testing.T) {
 func TestSchedConfigStructure(t *testing.T) {
 	t.Run("CompleteConfig", func(t *testing.T) {
 		config := &SchedConfig{
-			Mode:           "gthulhu",
-			SliceNsDefault: 5000000,
-			SliceNsMin:     500000,
-			FifoMode:       false,
+			Mode: "gthulhu",
+			Scheduler: Scheduler{
+				SliceNsDefault: 5000000,
+				SliceNsMin:     500000,
+			},
 		}
 
-		config.Scheduler.SliceNsDefault = 10000000
-		config.Scheduler.SliceNsMin = 1000000
 		config.APIConfig.PublicKeyPath = "/path/to/key"
 		config.APIConfig.BaseURL = "https://api.example.com"
 
 		if config.Mode != "gthulhu" {
 			t.Errorf("Expected mode 'gthulhu', got '%s'", config.Mode)
 		}
-		if config.SliceNsDefault != 5000000 {
-			t.Errorf("Expected SliceNsDefault 5000000, got %d", config.SliceNsDefault)
+		if config.Scheduler.SliceNsDefault != 5000000 {
+			t.Errorf("Expected SliceNsDefault 5000000, got %d", config.Scheduler.SliceNsDefault)
 		}
-		if config.Scheduler.SliceNsDefault != 10000000 {
-			t.Errorf("Expected Scheduler.SliceNsDefault 10000000, got %d", config.Scheduler.SliceNsDefault)
+		if config.Scheduler.SliceNsDefault != 5000000 {
+			t.Errorf("Expected Scheduler.SliceNsDefault 5000000, got %d", config.Scheduler.SliceNsDefault)
 		}
 		if config.APIConfig.BaseURL != "https://api.example.com" {
 			t.Errorf("Expected BaseURL 'https://api.example.com', got '%s'", config.APIConfig.BaseURL)
@@ -262,8 +261,8 @@ func TestSchedConfigStructure(t *testing.T) {
 		if config.Mode != "simple" {
 			t.Errorf("Expected mode 'simple', got '%s'", config.Mode)
 		}
-		if config.SliceNsDefault != 0 {
-			t.Errorf("Expected default SliceNsDefault 0, got %d", config.SliceNsDefault)
+		if config.Scheduler.SliceNsDefault != 0 {
+			t.Errorf("Expected default SliceNsDefault 0, got %d", config.Scheduler.SliceNsDefault)
 		}
 	})
 }
@@ -334,10 +333,11 @@ func TestFactoryWithConfigParameters(t *testing.T) {
 	_ = RegisterNewPlugin("config-test", factory)
 
 	config := &SchedConfig{
-		Mode:           "config-test",
-		SliceNsDefault: 12345,
-		SliceNsMin:     6789,
-		FifoMode:       true,
+		Mode: "config-test",
+		Scheduler: Scheduler{
+			SliceNsDefault: 12345,
+			SliceNsMin:     6789,
+		},
 	}
 
 	_, err := NewSchedulerPlugin(config)
@@ -351,14 +351,11 @@ func TestFactoryWithConfigParameters(t *testing.T) {
 	if capturedConfig.Mode != "config-test" {
 		t.Errorf("Expected mode 'config-test', got '%s'", capturedConfig.Mode)
 	}
-	if capturedConfig.SliceNsDefault != 12345 {
-		t.Errorf("Expected SliceNsDefault 12345, got %d", capturedConfig.SliceNsDefault)
+	if capturedConfig.Scheduler.SliceNsDefault != 12345 {
+		t.Errorf("Expected SliceNsDefault 12345, got %d", capturedConfig.Scheduler.SliceNsDefault)
 	}
-	if capturedConfig.SliceNsMin != 6789 {
-		t.Errorf("Expected SliceNsMin 6789, got %d", capturedConfig.SliceNsMin)
-	}
-	if !capturedConfig.FifoMode {
-		t.Error("Expected FifoMode true, got false")
+	if capturedConfig.Scheduler.SliceNsMin != 6789 {
+		t.Errorf("Expected SliceNsMin 6789, got %d", capturedConfig.Scheduler.SliceNsMin)
 	}
 }
 

@@ -1,6 +1,9 @@
 package gthulhu
 
 import (
+	"context"
+	"time"
+
 	"github.com/Gthulhu/plugin/models"
 	"github.com/Gthulhu/plugin/plugin"
 )
@@ -12,11 +15,11 @@ func init() {
 		sliceNsDefault := config.Scheduler.SliceNsDefault
 		sliceNsMin := config.Scheduler.SliceNsMin
 
-		if sliceNsDefault == 0 && config.SliceNsDefault > 0 {
-			sliceNsDefault = config.SliceNsDefault
+		if sliceNsDefault == 0 && config.Scheduler.SliceNsDefault > 0 {
+			sliceNsDefault = config.Scheduler.SliceNsDefault
 		}
-		if sliceNsMin == 0 && config.SliceNsMin > 0 {
-			sliceNsMin = config.SliceNsMin
+		if sliceNsMin == 0 && config.Scheduler.SliceNsMin > 0 {
+			sliceNsMin = config.Scheduler.SliceNsMin
 		}
 
 		gthulhuPlugin := NewGthulhuPlugin(sliceNsDefault, sliceNsMin)
@@ -34,7 +37,7 @@ func init() {
 				return nil, err
 			}
 		}
-
+		gthulhuPlugin.StartStrategyFetcher(context.TODO(), config.APIConfig.BaseURL, time.Duration(config.APIConfig.Interval)*time.Second)
 		return gthulhuPlugin, nil
 	})
 	if err != nil {

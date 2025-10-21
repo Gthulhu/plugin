@@ -15,9 +15,16 @@ import (
 func TestGthulhuPluginThroughFactory(t *testing.T) {
 	t.Run("BasicCreation", func(t *testing.T) {
 		config := &plugin.SchedConfig{
-			Mode:           "gthulhu",
-			SliceNsDefault: 5000 * 1000,
-			SliceNsMin:     500 * 1000,
+			Mode: "gthulhu",
+			Scheduler: plugin.Scheduler{
+				SliceNsDefault: 5000 * 1000,
+				SliceNsMin:     500 * 1000,
+			},
+			APIConfig: plugin.APIConfig{
+				PublicKeyPath: "/path/to/key",
+				BaseURL:       "https://api.example.com",
+				Interval:      10,
+			},
 		}
 
 		scheduler, err := plugin.NewSchedulerPlugin(config)
@@ -37,6 +44,11 @@ func TestGthulhuPluginThroughFactory(t *testing.T) {
 	t.Run("WithSchedulerConfig", func(t *testing.T) {
 		config := &plugin.SchedConfig{
 			Mode: "gthulhu",
+			APIConfig: plugin.APIConfig{
+				PublicKeyPath: "/path/to/key",
+				BaseURL:       "https://api.example.com",
+				Interval:      10,
+			},
 		}
 		config.Scheduler.SliceNsDefault = 10000 * 1000
 		config.Scheduler.SliceNsMin = 1000 * 1000
@@ -57,8 +69,16 @@ func TestGthulhuPluginThroughFactory(t *testing.T) {
 
 	t.Run("FunctionalTest", func(t *testing.T) {
 		config := &plugin.SchedConfig{
-			Mode:           "gthulhu",
-			SliceNsDefault: 5000 * 1000,
+			Mode: "gthulhu",
+			Scheduler: plugin.Scheduler{
+				SliceNsDefault: 5000 * 1000,
+				SliceNsMin:     500 * 1000,
+			},
+			APIConfig: plugin.APIConfig{
+				PublicKeyPath: "/path/to/key",
+				BaseURL:       "https://api.example.com",
+				Interval:      10,
+			},
 		}
 
 		scheduler, err := plugin.NewSchedulerPlugin(config)
@@ -102,8 +122,16 @@ func TestGthulhuPluginThroughFactory(t *testing.T) {
 func TestSimplePluginThroughFactory(t *testing.T) {
 	t.Run("SimpleWeightedVtime", func(t *testing.T) {
 		config := &plugin.SchedConfig{
-			Mode:           "simple",
-			SliceNsDefault: 5000 * 100,
+			Mode: "simple",
+			Scheduler: plugin.Scheduler{
+				SliceNsDefault: 5000 * 1000,
+				SliceNsMin:     500 * 1000,
+			},
+			APIConfig: plugin.APIConfig{
+				PublicKeyPath: "/path/to/key",
+				BaseURL:       "https://api.example.com",
+				Interval:      10,
+			},
 		}
 
 		scheduler, err := plugin.NewSchedulerPlugin(config)
@@ -122,8 +150,16 @@ func TestSimplePluginThroughFactory(t *testing.T) {
 
 	t.Run("SimpleFIFO", func(t *testing.T) {
 		config := &plugin.SchedConfig{
-			Mode:           "simple-fifo",
-			SliceNsDefault: 5000 * 100,
+			Mode: "simple-fifo",
+			Scheduler: plugin.Scheduler{
+				SliceNsDefault: 5000 * 1000,
+				SliceNsMin:     500 * 1000,
+			},
+			APIConfig: plugin.APIConfig{
+				PublicKeyPath: "/path/to/key",
+				BaseURL:       "https://api.example.com",
+				Interval:      10,
+			},
 		}
 
 		scheduler, err := plugin.NewSchedulerPlugin(config)
@@ -142,8 +178,16 @@ func TestSimplePluginThroughFactory(t *testing.T) {
 
 	t.Run("FunctionalTest", func(t *testing.T) {
 		config := &plugin.SchedConfig{
-			Mode:           "simple",
-			SliceNsDefault: 5000 * 100,
+			Mode: "simple",
+			Scheduler: plugin.Scheduler{
+				SliceNsDefault: 5000 * 1000,
+				SliceNsMin:     500 * 1000,
+			},
+			APIConfig: plugin.APIConfig{
+				PublicKeyPath: "/path/to/key",
+				BaseURL:       "https://api.example.com",
+				Interval:      10,
+			},
 		}
 
 		scheduler, err := plugin.NewSchedulerPlugin(config)
@@ -194,6 +238,11 @@ func TestSimplePluginThroughFactory(t *testing.T) {
 	t.Run("FIFOFunctionalTest", func(t *testing.T) {
 		config := &plugin.SchedConfig{
 			Mode: "simple-fifo",
+			APIConfig: plugin.APIConfig{
+				PublicKeyPath: "/path/to/key",
+				BaseURL:       "https://api.example.com",
+				Interval:      10,
+			},
 		}
 
 		scheduler, err := plugin.NewSchedulerPlugin(config)
@@ -247,12 +296,28 @@ func TestSimplePluginThroughFactory(t *testing.T) {
 func TestMultiplePluginInstances(t *testing.T) {
 	t.Run("MultipleGthulhuInstances", func(t *testing.T) {
 		config1 := &plugin.SchedConfig{
-			Mode:           "gthulhu",
-			SliceNsDefault: 5000 * 1000,
+			Mode: "gthulhu",
+			Scheduler: plugin.Scheduler{
+				SliceNsDefault: 5000 * 1000,
+				SliceNsMin:     500 * 1000,
+			},
+			APIConfig: plugin.APIConfig{
+				PublicKeyPath: "/path/to/key",
+				BaseURL:       "https://api.example.com",
+				Interval:      10,
+			},
 		}
 		config2 := &plugin.SchedConfig{
-			Mode:           "gthulhu",
-			SliceNsDefault: 10000 * 1000,
+			Mode: "gthulhu",
+			Scheduler: plugin.Scheduler{
+				SliceNsDefault: 5000 * 1000,
+				SliceNsMin:     500 * 1000,
+			},
+			APIConfig: plugin.APIConfig{
+				PublicKeyPath: "/path/to/key",
+				BaseURL:       "https://api.example.com",
+				Interval:      10,
+			},
 		}
 
 		scheduler1, err := plugin.NewSchedulerPlugin(config1)
@@ -282,7 +347,13 @@ func TestMultiplePluginInstances(t *testing.T) {
 	})
 
 	t.Run("MixedPluginTypes", func(t *testing.T) {
-		gthulhuConfig := &plugin.SchedConfig{Mode: "gthulhu"}
+		gthulhuConfig := &plugin.SchedConfig{
+			Mode: "gthulhu",
+			APIConfig: plugin.APIConfig{
+				PublicKeyPath: "/path/to/key",
+				BaseURL:       "https://api.example.com",
+				Interval:      10,
+			}}
 		simpleConfig := &plugin.SchedConfig{Mode: "simple"}
 		fifoConfig := &plugin.SchedConfig{Mode: "simple-fifo"}
 

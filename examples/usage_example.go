@@ -14,9 +14,11 @@ import (
 func gthulhuMainExample() {
 	// Create plugin configuration
 	pluginConfig := &plugin.SchedConfig{
-		Mode:           "gthulhu",
-		SliceNsDefault: 5000 * 1000,
-		SliceNsMin:     500 * 1000,
+		Mode: "gthulhu",
+		Scheduler: plugin.Scheduler{
+			SliceNsDefault: 5000 * 1000,
+			SliceNsMin:     500 * 1000,
+		},
 	}
 	pluginConfig.Scheduler.SliceNsDefault = 5000 * 1000
 	pluginConfig.Scheduler.SliceNsMin = 500 * 1000
