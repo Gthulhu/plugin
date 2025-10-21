@@ -145,7 +145,7 @@ config := &plugin.SchedConfig{
     SliceNsMin:     500 * 1000,   // 0.5ms
 }
 
-scheduler, err := plugin.NewSchedulerPlugin(config)
+scheduler, err := plugin.NewSchedulerPlugin(context.TODO(), config)
 if err != nil {
     log.Fatalf("Failed to create plugin: %v", err)
 }

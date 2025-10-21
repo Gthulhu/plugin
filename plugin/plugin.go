@@ -1,6 +1,7 @@
 package plugin
 
 import (
+	"context"
 	"fmt"
 	"sync"
 
@@ -51,7 +52,7 @@ type SchedConfig struct {
 }
 
 // PluginFactory is a function type that creates a CustomScheduler instance
-type PluginFactory func(config *SchedConfig) (CustomScheduler, error)
+type PluginFactory func(ctx context.Context, config *SchedConfig) (CustomScheduler, error)
 
 var (
 	// pluginRegistry stores registered plugin factories
@@ -83,7 +84,7 @@ func RegisterNewPlugin(mode string, factory PluginFactory) error {
 
 // NewSchedulerPlugin creates a new scheduler plugin based on the configuration
 // This is the factory function that follows the simple factory pattern
-func NewSchedulerPlugin(config *SchedConfig) (CustomScheduler, error) {
+func NewSchedulerPlugin(ctx context.Context, config *SchedConfig) (CustomScheduler, error) {
 	if config == nil {
 		return nil, fmt.Errorf("config cannot be nil")
 	}
@@ -96,7 +97,7 @@ func NewSchedulerPlugin(config *SchedConfig) (CustomScheduler, error) {
 		return nil, fmt.Errorf("unknown plugin mode: %s", config.Mode)
 	}
 
-	return factory(config)
+	return factory(ctx, config)
 }
 
 // GetRegisteredModes returns a list of all registered plugin modes

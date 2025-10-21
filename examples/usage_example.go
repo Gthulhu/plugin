@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"log"
 
@@ -24,7 +25,7 @@ func gthulhuMainExample() {
 	pluginConfig.Scheduler.SliceNsMin = 500 * 1000
 
 	// Create the plugin using the factory
-	scheduler, err := plugin.NewSchedulerPlugin(pluginConfig)
+	scheduler, err := plugin.NewSchedulerPlugin(context.TODO(), pluginConfig)
 	if err != nil {
 		log.Fatalf("Failed to create scheduler plugin: %v", err)
 	}

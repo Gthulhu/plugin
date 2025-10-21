@@ -1,6 +1,7 @@
 package plugin
 
 import (
+	"context"
 	"testing"
 
 	"github.com/Gthulhu/plugin/models"
@@ -27,7 +28,7 @@ func TestRegisterNewPlugin(t *testing.T) {
 		pluginRegistry = make(map[string]PluginFactory)
 		registryMutex.Unlock()
 
-		factory := func(config *SchedConfig) (CustomScheduler, error) {
+		factory := func(ctx context.Context, config *SchedConfig) (CustomScheduler, error) {
 			return &mockScheduler{}, nil
 		}
 
@@ -44,7 +45,7 @@ func TestRegisterNewPlugin(t *testing.T) {
 	})
 
 	t.Run("EmptyModeError", func(t *testing.T) {
-		factory := func(config *SchedConfig) (CustomScheduler, error) {
+		factory := func(ctx context.Context, config *SchedConfig) (CustomScheduler, error) {
 			return &mockScheduler{}, nil
 		}
 
@@ -73,7 +74,7 @@ func TestRegisterNewPlugin(t *testing.T) {
 		pluginRegistry = make(map[string]PluginFactory)
 		registryMutex.Unlock()
 
-		factory := func(config *SchedConfig) (CustomScheduler, error) {
+		factory := func(ctx context.Context, config *SchedConfig) (CustomScheduler, error) {
 			return &mockScheduler{}, nil
 		}
 
@@ -110,7 +111,7 @@ func TestNewSchedulerPlugin(t *testing.T) {
 	}()
 
 	t.Run("NilConfigError", func(t *testing.T) {
-		_, err := NewSchedulerPlugin(nil)
+		_, err := NewSchedulerPlugin(context.TODO(), nil)
 		if err == nil {
 			t.Error("Expected error for nil config, got nil")
 		}
@@ -121,7 +122,7 @@ func TestNewSchedulerPlugin(t *testing.T) {
 
 	t.Run("UnknownModeError", func(t *testing.T) {
 		config := &SchedConfig{Mode: "unknown-mode"}
-		_, err := NewSchedulerPlugin(config)
+		_, err := NewSchedulerPlugin(context.TODO(), config)
 		if err == nil {
 			t.Error("Expected error for unknown mode, got nil")
 		}
@@ -136,7 +137,7 @@ func TestNewSchedulerPlugin(t *testing.T) {
 		pluginRegistry = make(map[string]PluginFactory)
 		registryMutex.Unlock()
 
-		factory := func(config *SchedConfig) (CustomScheduler, error) {
+		factory := func(ctx context.Context, config *SchedConfig) (CustomScheduler, error) {
 			return &mockScheduler{mode: config.Mode}, nil
 		}
 
@@ -146,7 +147,7 @@ func TestNewSchedulerPlugin(t *testing.T) {
 		}
 
 		config := &SchedConfig{Mode: "test-plugin"}
-		scheduler, err := NewSchedulerPlugin(config)
+		scheduler, err := NewSchedulerPlugin(context.TODO(), config)
 		if err != nil {
 			t.Errorf("NewSchedulerPlugin failed: %v", err)
 		}
@@ -197,7 +198,7 @@ func TestGetRegisteredModes(t *testing.T) {
 		pluginRegistry = make(map[string]PluginFactory)
 		registryMutex.Unlock()
 
-		factory := func(config *SchedConfig) (CustomScheduler, error) {
+		factory := func(ctx context.Context, config *SchedConfig) (CustomScheduler, error) {
 			return &mockScheduler{}, nil
 		}
 
@@ -282,7 +283,7 @@ func TestConcurrentRegistration(t *testing.T) {
 		registryMutex.Unlock()
 	}()
 
-	factory := func(config *SchedConfig) (CustomScheduler, error) {
+	factory := func(ctx context.Context, config *SchedConfig) (CustomScheduler, error) {
 		return &mockScheduler{}, nil
 	}
 
@@ -325,7 +326,7 @@ func TestFactoryWithConfigParameters(t *testing.T) {
 
 	// Register a plugin that captures config
 	var capturedConfig *SchedConfig
-	factory := func(config *SchedConfig) (CustomScheduler, error) {
+	factory := func(ctx context.Context, config *SchedConfig) (CustomScheduler, error) {
 		capturedConfig = config
 		return &mockScheduler{}, nil
 	}
@@ -340,7 +341,7 @@ func TestFactoryWithConfigParameters(t *testing.T) {
 		},
 	}
 
-	_, err := NewSchedulerPlugin(config)
+	_, err := NewSchedulerPlugin(context.TODO(), config)
 	if err != nil {
 		t.Fatalf("NewSchedulerPlugin failed: %v", err)
 	}

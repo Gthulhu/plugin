@@ -1,6 +1,7 @@
 package tests
 
 import (
+	"context"
 	"testing"
 
 	"github.com/Gthulhu/plugin/models"
@@ -27,7 +28,7 @@ func TestGthulhuPluginThroughFactory(t *testing.T) {
 			},
 		}
 
-		scheduler, err := plugin.NewSchedulerPlugin(config)
+		scheduler, err := plugin.NewSchedulerPlugin(context.TODO(), config)
 		if err != nil {
 			t.Fatalf("Failed to create gthulhu plugin: %v", err)
 		}
@@ -53,7 +54,7 @@ func TestGthulhuPluginThroughFactory(t *testing.T) {
 		config.Scheduler.SliceNsDefault = 10000 * 1000
 		config.Scheduler.SliceNsMin = 1000 * 1000
 
-		scheduler, err := plugin.NewSchedulerPlugin(config)
+		scheduler, err := plugin.NewSchedulerPlugin(context.TODO(), config)
 		if err != nil {
 			t.Fatalf("Failed to create gthulhu plugin: %v", err)
 		}
@@ -81,7 +82,7 @@ func TestGthulhuPluginThroughFactory(t *testing.T) {
 			},
 		}
 
-		scheduler, err := plugin.NewSchedulerPlugin(config)
+		scheduler, err := plugin.NewSchedulerPlugin(context.TODO(), config)
 		if err != nil {
 			t.Fatalf("Failed to create gthulhu plugin: %v", err)
 		}
@@ -134,7 +135,7 @@ func TestSimplePluginThroughFactory(t *testing.T) {
 			},
 		}
 
-		scheduler, err := plugin.NewSchedulerPlugin(config)
+		scheduler, err := plugin.NewSchedulerPlugin(context.TODO(), config)
 		if err != nil {
 			t.Fatalf("Failed to create simple plugin: %v", err)
 		}
@@ -162,7 +163,7 @@ func TestSimplePluginThroughFactory(t *testing.T) {
 			},
 		}
 
-		scheduler, err := plugin.NewSchedulerPlugin(config)
+		scheduler, err := plugin.NewSchedulerPlugin(context.TODO(), config)
 		if err != nil {
 			t.Fatalf("Failed to create simple-fifo plugin: %v", err)
 		}
@@ -190,7 +191,7 @@ func TestSimplePluginThroughFactory(t *testing.T) {
 			},
 		}
 
-		scheduler, err := plugin.NewSchedulerPlugin(config)
+		scheduler, err := plugin.NewSchedulerPlugin(context.TODO(), config)
 		if err != nil {
 			t.Fatalf("Failed to create simple plugin: %v", err)
 		}
@@ -245,7 +246,7 @@ func TestSimplePluginThroughFactory(t *testing.T) {
 			},
 		}
 
-		scheduler, err := plugin.NewSchedulerPlugin(config)
+		scheduler, err := plugin.NewSchedulerPlugin(context.TODO(), config)
 		if err != nil {
 			t.Fatalf("Failed to create simple-fifo plugin: %v", err)
 		}
@@ -320,12 +321,12 @@ func TestMultiplePluginInstances(t *testing.T) {
 			},
 		}
 
-		scheduler1, err := plugin.NewSchedulerPlugin(config1)
+		scheduler1, err := plugin.NewSchedulerPlugin(context.TODO(), config1)
 		if err != nil {
 			t.Fatalf("Failed to create first plugin: %v", err)
 		}
 
-		scheduler2, err := plugin.NewSchedulerPlugin(config2)
+		scheduler2, err := plugin.NewSchedulerPlugin(context.TODO(), config2)
 		if err != nil {
 			t.Fatalf("Failed to create second plugin: %v", err)
 		}
@@ -357,17 +358,17 @@ func TestMultiplePluginInstances(t *testing.T) {
 		simpleConfig := &plugin.SchedConfig{Mode: "simple"}
 		fifoConfig := &plugin.SchedConfig{Mode: "simple-fifo"}
 
-		gthulhu, err := plugin.NewSchedulerPlugin(gthulhuConfig)
+		gthulhu, err := plugin.NewSchedulerPlugin(context.TODO(), gthulhuConfig)
 		if err != nil {
 			t.Fatalf("Failed to create gthulhu plugin: %v", err)
 		}
 
-		simple, err := plugin.NewSchedulerPlugin(simpleConfig)
+		simple, err := plugin.NewSchedulerPlugin(context.TODO(), simpleConfig)
 		if err != nil {
 			t.Fatalf("Failed to create simple plugin: %v", err)
 		}
 
-		fifo, err := plugin.NewSchedulerPlugin(fifoConfig)
+		fifo, err := plugin.NewSchedulerPlugin(context.TODO(), fifoConfig)
 		if err != nil {
 			t.Fatalf("Failed to create simple-fifo plugin: %v", err)
 		}

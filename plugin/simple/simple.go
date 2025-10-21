@@ -1,13 +1,15 @@
 package simple
 
 import (
+	"context"
+
 	"github.com/Gthulhu/plugin/models"
 	"github.com/Gthulhu/plugin/plugin"
 )
 
 func init() {
 	// Register the simple plugin with weighted vtime mode
-	err := plugin.RegisterNewPlugin("simple", func(config *plugin.SchedConfig) (plugin.CustomScheduler, error) {
+	err := plugin.RegisterNewPlugin("simple", func(ctx context.Context, config *plugin.SchedConfig) (plugin.CustomScheduler, error) {
 		simplePlugin := NewSimplePlugin(false) // weighted vtime mode
 
 		if config.Scheduler.SliceNsDefault > 0 {
@@ -21,7 +23,7 @@ func init() {
 	}
 
 	// Register the simple plugin with FIFO mode
-	err = plugin.RegisterNewPlugin("simple-fifo", func(config *plugin.SchedConfig) (plugin.CustomScheduler, error) {
+	err = plugin.RegisterNewPlugin("simple-fifo", func(ctx context.Context, config *plugin.SchedConfig) (plugin.CustomScheduler, error) {
 		simplePlugin := NewSimplePlugin(true) // FIFO mode
 
 		if config.Scheduler.SliceNsDefault > 0 {

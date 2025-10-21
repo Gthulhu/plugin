@@ -10,7 +10,7 @@ import (
 
 func init() {
 	// Register the gthulhu plugin with the factory
-	err := plugin.RegisterNewPlugin("gthulhu", func(config *plugin.SchedConfig) (plugin.CustomScheduler, error) {
+	err := plugin.RegisterNewPlugin("gthulhu", func(ctx context.Context, config *plugin.SchedConfig) (plugin.CustomScheduler, error) {
 		// Use Scheduler config if available, otherwise use SimpleScheduler config
 		sliceNsDefault := config.Scheduler.SliceNsDefault
 		sliceNsMin := config.Scheduler.SliceNsMin
