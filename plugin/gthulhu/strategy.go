@@ -31,7 +31,6 @@ func fetchSchedulingStrategies(jwtClient *JWTClient, apiUrl string) ([]Schedulin
 	if jwtClient == nil {
 		return nil, fmt.Errorf("JWT client not initialized")
 	}
-
 	resp, err := jwtClient.MakeAuthenticatedRequest("GET", apiUrl, nil)
 	if err != nil {
 		return nil, err
@@ -66,7 +65,7 @@ func (g *GthulhuPlugin) StartStrategyFetcher(ctx context.Context, apiUrl string,
 	ticker := time.NewTicker(interval)
 	go func() {
 		// Fetch immediately on start
-		if strategies, err := g.FetchSchedulingStrategies(apiUrl); err == nil && strategies != nil {
+		if strategies, err := g.FetchSchedulingStrategies(apiUrl + "/api/v1/scheduling/strategies"); err == nil && strategies != nil {
 			log.Printf("Initial scheduling strategies fetched: %d strategies", len(strategies))
 			g.UpdateStrategyMap(strategies)
 		} else if err != nil {
@@ -79,7 +78,7 @@ func (g *GthulhuPlugin) StartStrategyFetcher(ctx context.Context, apiUrl string,
 				ticker.Stop()
 				return
 			case <-ticker.C:
-				if strategies, err := g.FetchSchedulingStrategies(apiUrl); err == nil && strategies != nil {
+				if strategies, err := g.FetchSchedulingStrategies(apiUrl + "/api/v1/scheduling/strategies"); err == nil && strategies != nil {
 					log.Printf("Scheduling strategies updated: %d strategies", len(strategies))
 					g.UpdateStrategyMap(strategies)
 				} else if err != nil {
