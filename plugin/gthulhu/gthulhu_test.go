@@ -492,3 +492,50 @@ func TestGthulhuPluginRuntimeSimulation(t *testing.T) {
 		}
 	})
 }
+
+// TestMinHeapOrderByDeadline verifies that the task pool (min-heap) always pops
+// the task with the smallest Deadline first, using Timestamp and Pid as
+// tie-breakers per lessQueuedTask.
+func TestMinHeapOrderByDeadline(t *testing.T) {
+	g := NewGthulhuPlugin(0, 0)
+
+	// Build tasks with explicit deadlines (representing vtime) and timestamps
+	type input struct {
+		pid       int32
+		deadline  uint64
+		timestamp uint64
+	}
+	inputs := []input{
+		{pid: 101, deadline: 30, timestamp: 300},
+		{pid: 102, deadline: 10, timestamp: 200},
+		{pid: 103, deadline: 20, timestamp: 100},
+		{pid: 104, deadline: 10, timestamp: 150},
+		{pid: 105, deadline: 5, timestamp: 250},
+	}
+
+	for _, in := range inputs {
+		qt := &models.QueuedTask{Pid: in.pid, StartTs: in.timestamp}
+		task := Task{QueuedTask: qt, Deadline: in.deadline, Timestamp: in.timestamp}
+		ok := g.insertTaskToPool(task)
+		if !ok {
+			t.Fatalf("failed to insert task pid=%d", in.pid)
+		}
+	}
+
+	// Expected pop order by (deadline, timestamp, pid)
+	expected := []int32{105, 104, 102, 103, 101}
+	got := make([]int32, 0, len(expected))
+	for range expected {
+		qt := g.getTaskFromPool()
+		if qt == nil {
+			t.Fatalf("expected a task, got nil")
+		}
+		got = append(got, qt.Pid)
+	}
+
+	for i := range expected {
+		if got[i] != expected[i] {
+			t.Fatalf("pop order mismatch at %d: got %v, want %v", i, got, expected)
+		}
+	}
+}
