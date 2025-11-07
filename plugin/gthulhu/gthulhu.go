@@ -131,32 +131,32 @@ func (g *GthulhuPlugin) GetPoolCount() uint64 {
 // drainQueuedTask drains tasks from the scheduler queue into the task pool
 func (g *GthulhuPlugin) drainQueuedTask(s reg.Sched) int {
 	var count int
-	// Drain until pool is near capacity (leave one slot, preserving prior semantics)
+	// Hold the lock across capacity check and insertion to avoid TOCTOU race
 	for {
 		g.poolMu.Lock()
 		if g.taskPoolCount >= taskPoolSize-1 {
 			g.poolMu.Unlock()
 			break
 		}
-		g.poolMu.Unlock()
 		var newQueuedTask models.QueuedTask
 		s.DequeueTask(&newQueuedTask)
 		if newQueuedTask.Pid == -1 {
+			g.poolMu.Unlock()
 			return count
 		}
-
 		t := Task{
 			QueuedTask: &newQueuedTask,
 			Deadline:   g.updatedEnqueueTask(&newQueuedTask),
 			Timestamp:  newQueuedTask.StartTs,
 		}
-		if !g.insertTaskToPool(t) {
-			// Pool reported full; stop draining
-			return count
-		}
+		// Direct heap insert (no second lock acquisition)
+		g.taskPool[g.taskPoolCount] = t
+		g.heapSiftUp(g.taskPoolCount)
+		g.taskPoolCount++
+		g.poolMu.Unlock()
 		count++
 	}
-	return 0
+	return count
 }
 
 // updatedEnqueueTask updates the task's vtime based on scheduling strategy
