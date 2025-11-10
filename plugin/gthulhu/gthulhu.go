@@ -176,6 +176,7 @@ func (g *GthulhuPlugin) updatedEnqueueTask(t *models.QueuedTask) uint64 {
 			t.Vtime = minVruntimeLocal
 		}
 		t.Vtime += (t.StopTs - t.StartTs) * t.Weight / 100
+		return t.Vtime + min(t.SumExecRuntime, g.sliceNsDefault*100)
 	}
 
 	return 0
