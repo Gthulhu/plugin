@@ -169,13 +169,13 @@ func (g *GthulhuPlugin) updatedEnqueueTask(t *models.QueuedTask) uint64 {
 		if g.minVruntime < t.Vtime {
 			g.minVruntime = t.Vtime
 		}
-		minVruntimeLocal := saturatingSub(g.minVruntime, g.sliceNsDefault)
+		minVruntime := saturatingSub(g.minVruntime, g.sliceNsDefault)
 		if t.Vtime == 0 {
-			t.Vtime = minVruntimeLocal + (g.sliceNsDefault * 100 / t.Weight)
-		} else if t.Vtime < minVruntimeLocal {
-			t.Vtime = minVruntimeLocal
+			t.Vtime = minVruntime + (g.sliceNsDefault * 100 / t.Weight)
+		} else if t.Vtime < minVruntime {
+			t.Vtime = minVruntime
 		}
-		t.Vtime += (t.StopTs - t.StartTs) * t.Weight / 100
+		t.Vtime += (t.StopTs - t.StartTs) * 100 / t.Weight
 		return t.Vtime + min(t.SumExecRuntime, g.sliceNsDefault*100)
 	}
 
