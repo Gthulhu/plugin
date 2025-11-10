@@ -38,8 +38,8 @@ func init() {
 			if err != nil {
 				return nil, err
 			}
+			gthulhuPlugin.StartStrategyFetcher(ctx, config.APIConfig.BaseURL, time.Duration(config.APIConfig.Interval)*time.Second)
 		}
-		gthulhuPlugin.StartStrategyFetcher(ctx, config.APIConfig.BaseURL, time.Duration(config.APIConfig.Interval)*time.Second)
 		return gthulhuPlugin, nil
 	})
 	if err != nil {
