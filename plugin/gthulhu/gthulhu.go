@@ -166,16 +166,15 @@ func (g *GthulhuPlugin) updatedEnqueueTask(t *models.QueuedTask) uint64 {
 
 	if !strategyApplied {
 		// Default behavior if no specific strategy is found
-		if g.minVruntime < t.Vtime {
-			g.minVruntime = t.Vtime
-		}
 		minVruntime := saturatingSub(g.minVruntime, g.sliceNsDefault)
 		if t.Vtime == 0 {
 			t.Vtime = minVruntime + (g.sliceNsDefault * 100 / t.Weight)
 		} else if t.Vtime < minVruntime {
 			t.Vtime = minVruntime
 		}
-		t.Vtime += (t.StopTs - t.StartTs) * 100 / t.Weight
+		vslice := (t.StopTs - t.StartTs) * 100 / t.Weight
+		t.Vtime += vslice
+		g.minVruntime += vslice
 		return t.Vtime + min(t.SumExecRuntime, g.sliceNsDefault*100)
 	}
 
