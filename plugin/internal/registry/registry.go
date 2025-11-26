@@ -38,6 +38,7 @@ type APIConfig struct {
 	PublicKeyPath string `yaml:"public_key_path"`
 	BaseURL       string `yaml:"base_url"`
 	Interval      int    `yaml:"interval"`
+	Enabled       bool   `yaml:"enabled"`
 }
 
 // SchedConfig holds the configuration parameters for creating a scheduler plugin

@@ -27,7 +27,8 @@ func init() {
 		gthulhuPlugin := NewGthulhuPlugin(sliceNsDefault, sliceNsMin)
 
 		// Initialize JWT client if API config is provided
-		if config.APIConfig.PublicKeyPath != "" && config.APIConfig.BaseURL != "" {
+		if config.APIConfig.Enabled &&
+			config.APIConfig.PublicKeyPath != "" && config.APIConfig.BaseURL != "" {
 			err := gthulhuPlugin.InitJWTClient(config.APIConfig.PublicKeyPath, config.APIConfig.BaseURL)
 			if err != nil {
 				return nil, err
