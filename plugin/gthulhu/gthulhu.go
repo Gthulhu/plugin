@@ -29,11 +29,14 @@ func init() {
 		// Initialize JWT client if API config is provided
 		if config.APIConfig.Enabled &&
 			config.APIConfig.PublicKeyPath != "" && config.APIConfig.BaseURL != "" {
-			err := gthulhuPlugin.InitJWTClient(config.APIConfig.PublicKeyPath, config.APIConfig.BaseURL)
+			err := gthulhuPlugin.InitJWTClient(
+				config.APIConfig.PublicKeyPath,
+				config.APIConfig.BaseURL,
+				config.APIConfig.AuthEnabled,
+			)
 			if err != nil {
 				return nil, err
 			}
-
 			// Initialize metrics client
 			err = gthulhuPlugin.InitMetricsClient(config.APIConfig.BaseURL)
 			if err != nil {
@@ -301,8 +304,12 @@ func (g *GthulhuPlugin) getTaskExecutionTime(pid int32) uint64 {
 }
 
 // InitJWTClient initializes the JWT client for API authentication
-func (g *GthulhuPlugin) InitJWTClient(publicKeyPath, apiBaseURL string) error {
-	g.jwtClient = NewJWTClient(publicKeyPath, apiBaseURL)
+func (g *GthulhuPlugin) InitJWTClient(
+	publicKeyPath,
+	apiBaseURL string,
+	authEnabled bool,
+) error {
+	g.jwtClient = NewJWTClient(publicKeyPath, apiBaseURL, authEnabled)
 	return nil
 }
 
