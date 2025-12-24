@@ -39,16 +39,22 @@ type JWTClient struct {
 	token          string
 	tokenExpiresAt time.Time
 	httpClient     *http.Client
+	authEnabled    bool
 }
 
 // NewJWTClient creates a new JWT client
-func NewJWTClient(publicKeyPath, apiBaseURL string) *JWTClient {
+func NewJWTClient(
+	publicKeyPath,
+	apiBaseURL string,
+	authEnabled bool,
+) *JWTClient {
 	return &JWTClient{
 		publicKeyPath: publicKeyPath,
 		apiBaseURL:    strings.TrimSuffix(apiBaseURL, "/"),
 		httpClient: &http.Client{
 			Timeout: 30 * time.Second,
 		},
+		authEnabled: authEnabled,
 	}
 }
 
@@ -164,17 +170,18 @@ func (c *JWTClient) GetAuthenticatedClient() (*http.Client, error) {
 
 // MakeAuthenticatedRequest makes an HTTP request with JWT authentication
 func (c *JWTClient) MakeAuthenticatedRequest(method, url string, body io.Reader) (*http.Response, error) {
-	if err := c.ensureValidToken(); err != nil {
-		return nil, err
-	}
-
 	req, err := http.NewRequest(method, url, body)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create request: %v", err)
 	}
 
 	// Add Authorization header
-	req.Header.Set("Authorization", "Bearer "+c.token)
+	if c.authEnabled {
+		if err := c.ensureValidToken(); err != nil {
+			return nil, err
+		}
+		req.Header.Set("Authorization", "Bearer "+c.token)
+	}
 	req.Header.Set("Content-Type", "application/json")
 
 	return c.httpClient.Do(req)
