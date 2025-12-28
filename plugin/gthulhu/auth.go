@@ -18,12 +18,17 @@ type TokenRequest struct {
 	PublicKey string `json:"public_key"` // PEM encoded public key
 }
 
+// TokenData represents the data field in JWT token response
+type TokenData struct {
+	Token     string `json:"token,omitempty"`
+	ExpiredAt int64  `json:"expired_at,omitempty"`
+}
+
 // TokenResponse represents the response structure for JWT token generation
 type TokenResponse struct {
-	Success   bool   `json:"success"`
-	Message   string `json:"message"`
-	Timestamp string `json:"timestamp"`
-	Token     string `json:"token,omitempty"`
+	Success   bool      `json:"success"`
+	Data      TokenData `json:"data"`
+	Timestamp string    `json:"timestamp"`
 }
 
 // ErrorResponse represents error response structure
@@ -128,13 +133,13 @@ func (c *JWTClient) requestToken() error {
 		return fmt.Errorf("failed to unmarshal token response: %v", err)
 	}
 
-	if !tokenResp.Success || tokenResp.Token == "" {
-		return fmt.Errorf("token request unsuccessful: %s", tokenResp.Message)
+	if !tokenResp.Success || tokenResp.Data.Token == "" {
+		return fmt.Errorf("token request unsuccessful")
 	}
 
-	c.token = tokenResp.Token
-	// Set token expiration to 23 hours from now (giving 1 hour buffer before actual expiration)
-	c.tokenExpiresAt = time.Now().Add(23 * time.Hour)
+	c.token = tokenResp.Data.Token
+	// Use the expiration time from the response
+	c.tokenExpiresAt = time.Unix(tokenResp.Data.ExpiredAt, 0)
 
 	return nil
 }
