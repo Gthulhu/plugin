@@ -8,6 +8,7 @@ import (
 
 	"github.com/Gthulhu/plugin/models"
 	reg "github.com/Gthulhu/plugin/plugin/internal/registry"
+	"github.com/Gthulhu/plugin/plugin/util"
 )
 
 func init() {
@@ -65,8 +66,11 @@ type GthulhuPlugin struct {
 	minVruntime uint64
 
 	// Strategy map for PID-based scheduling strategies
-	strategyMap map[int32]SchedulingStrategy
-	strategyMu  sync.RWMutex
+	oldStrategyMap  map[int32]util.SchedulingStrategy
+	strategyMap     map[int32]util.SchedulingStrategy
+	newStrategy     []util.SchedulingStrategy
+	removedStrategy []util.SchedulingStrategy
+	strategyMu      sync.RWMutex
 
 	// JWT client for API authentication
 	jwtClient *JWTClient
@@ -82,7 +86,7 @@ func NewGthulhuPlugin(sliceNsDefault, sliceNsMin uint64) *GthulhuPlugin {
 		taskPool:       make([]Task, taskPoolSize),
 		taskPoolCount:  0,
 		minVruntime:    0,
-		strategyMap:    make(map[int32]SchedulingStrategy),
+		strategyMap:    make(map[int32]util.SchedulingStrategy),
 	}
 
 	// Override defaults if provided
@@ -348,7 +352,7 @@ func (g *GthulhuPlugin) GetSchedulerConfig() (uint64, uint64) {
 }
 
 // FetchSchedulingStrategies fetches scheduling strategies from the API server
-func (g *GthulhuPlugin) FetchSchedulingStrategies(apiUrl string) ([]SchedulingStrategy, error) {
+func (g *GthulhuPlugin) FetchSchedulingStrategies(apiUrl string) ([]util.SchedulingStrategy, error) {
 	if g.jwtClient == nil {
 		return nil, nil // Silently skip if JWT client not initialized
 	}
@@ -356,9 +360,9 @@ func (g *GthulhuPlugin) FetchSchedulingStrategies(apiUrl string) ([]SchedulingSt
 }
 
 // UpdateStrategyMap updates the strategy map from a slice of strategies
-func (g *GthulhuPlugin) UpdateStrategyMap(strategies []SchedulingStrategy) {
+func (g *GthulhuPlugin) UpdateStrategyMap(strategies []util.SchedulingStrategy) {
 	// Create a new map to avoid concurrent access issues
-	newMap := make(map[int32]SchedulingStrategy)
+	newMap := make(map[int32]util.SchedulingStrategy)
 
 	for _, strategy := range strategies {
 		newMap[int32(strategy.PID)] = strategy
@@ -366,6 +370,45 @@ func (g *GthulhuPlugin) UpdateStrategyMap(strategies []SchedulingStrategy) {
 
 	// Replace the old map with the new one
 	g.strategyMu.Lock()
+	g.oldStrategyMap = g.strategyMap
 	g.strategyMap = newMap
+	changed, removed := g.caculateChangedStrategies()
+	g.newStrategy = append(g.newStrategy, changed...)
+	g.removedStrategy = append(g.removedStrategy, removed...)
 	g.strategyMu.Unlock()
+}
+
+// Campare g.oldStrategyMap and g.strategyMap and return the list of SchedulingStrategy that have changed strategies
+func (g *GthulhuPlugin) caculateChangedStrategies() ([]util.SchedulingStrategy, []util.SchedulingStrategy) {
+	changed := []util.SchedulingStrategy{}
+	removed := []util.SchedulingStrategy{}
+
+	// Check for removed strategies
+	for pid, oldStrategy := range g.oldStrategyMap {
+		_, exists := g.strategyMap[pid]
+		if !exists {
+			removed = append(removed, oldStrategy)
+		}
+	}
+
+	// Check for changed or new strategies
+	for pid, newStrategy := range g.strategyMap {
+		oldStrategy, exists := g.oldStrategyMap[pid]
+		if !exists || oldStrategy != newStrategy {
+			changed = append(changed, newStrategy)
+		}
+	}
+	return changed, removed
+}
+
+// Campare g.oldStrategyMap and g.strategyMap and return the list of SchedulingStrategy that have changed strategies
+func (g *GthulhuPlugin) GetChangedStrategies() ([]util.SchedulingStrategy, []util.SchedulingStrategy) {
+	changed := []util.SchedulingStrategy{}
+	g.strategyMu.RLock()
+	defer g.strategyMu.RUnlock()
+
+	// copy g.newStrategy to changed and clear g.newStrategy
+	changed = append(changed, g.newStrategy...)
+	g.newStrategy = []util.SchedulingStrategy{}
+	return changed, nil
 }

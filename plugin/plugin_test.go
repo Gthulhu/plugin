@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/Gthulhu/plugin/models"
+	"github.com/Gthulhu/plugin/plugin/util"
 )
 
 // TestRegisterNewPlugin tests the plugin registration functionality
@@ -359,4 +360,8 @@ func (m *mockScheduler) DetermineTimeSlice(s Sched, t *models.QueuedTask) uint64
 
 func (m *mockScheduler) GetPoolCount() uint64 {
 	return 0
+}
+
+func (m *mockScheduler) GetChangedStrategies() ([]util.SchedulingStrategy, []util.SchedulingStrategy) {
+	return nil, nil
 }

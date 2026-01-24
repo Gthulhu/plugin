@@ -5,6 +5,7 @@ import (
 
 	"github.com/Gthulhu/plugin/models"
 	reg "github.com/Gthulhu/plugin/plugin/internal/registry"
+	"github.com/Gthulhu/plugin/plugin/util"
 )
 
 func init() {
@@ -144,12 +145,10 @@ func (s *SimplePlugin) enqueueTask(queuedTask *models.QueuedTask) Task {
 
 	// Weighted vtime scheduling logic
 	if !s.fifoMode {
-
 		// Limit the amount of budget that an idling task can accumulate to one slice
 		if vtime < saturatingSub(s.vtimeNow, s.sliceDefault) {
 			vtime = saturatingSub(s.vtimeNow, s.sliceDefault)
 		}
-
 	}
 
 	// Ensure vtime is never 0 - use minimum value of 1 if needed
@@ -288,4 +287,8 @@ func (s *SimplePlugin) ResetStats() {
 func (s *SimplePlugin) GetPoolStatus() (head, tail, count, capacity int) {
 	// For slice implementation: head=0, tail=len, count=len, capacity=cap
 	return 0, len(s.taskPool), len(s.taskPool), cap(s.taskPool)
+}
+
+func (s *SimplePlugin) GetChangedStrategies() ([]util.SchedulingStrategy, []util.SchedulingStrategy) {
+	return nil, nil
 }
