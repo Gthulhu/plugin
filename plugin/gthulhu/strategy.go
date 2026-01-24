@@ -7,27 +7,14 @@ import (
 	"io"
 	"log"
 	"time"
+
+	"github.com/Gthulhu/plugin/plugin/util"
 )
-
-// SchedulingStrategy represents a strategy for process scheduling
-type SchedulingStrategy struct {
-	Priority      bool   `json:"priority"`       // If true, set vtime to minimum vtime
-	ExecutionTime uint64 `json:"execution_time"` // Time slice for this process in nanoseconds
-	PID           int    `json:"pid"`            // Process ID to apply this strategy to
-}
-
-// SchedulingStrategiesResponse represents the response structure from the API
-type SchedulingStrategiesResponse struct {
-	Success    bool                 `json:"success"`
-	Message    string               `json:"message"`
-	Timestamp  string               `json:"timestamp"`
-	Scheduling []SchedulingStrategy `json:"scheduling"`
-}
 
 const SCX_ENQ_PREEMPT = 1 << 32
 
 // fetchSchedulingStrategies fetches scheduling strategies from the API server with JWT authentication
-func fetchSchedulingStrategies(jwtClient *JWTClient, apiUrl string) ([]SchedulingStrategy, error) {
+func fetchSchedulingStrategies(jwtClient *JWTClient, apiUrl string) ([]util.SchedulingStrategy, error) {
 	if jwtClient == nil {
 		return nil, fmt.Errorf("JWT client not initialized")
 	}
@@ -47,7 +34,7 @@ func fetchSchedulingStrategies(jwtClient *JWTClient, apiUrl string) ([]Schedulin
 		return nil, err
 	}
 
-	var response SchedulingStrategiesResponse
+	var response util.SchedulingStrategiesResponse
 	if err := json.Unmarshal(body, &response); err != nil {
 		return nil, err
 	}

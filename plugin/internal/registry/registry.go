@@ -6,6 +6,7 @@ import (
 	"sync"
 
 	"github.com/Gthulhu/plugin/models"
+	"github.com/Gthulhu/plugin/plugin/util"
 )
 
 type Sched interface {
@@ -27,6 +28,8 @@ type CustomScheduler interface {
 	GetPoolCount() uint64
 	// SendMetrics sends custom metrics to the monitoring system
 	SendMetrics(interface{})
+	// GetChangedStrategies returns the list of scheduling strategies that have changed since the last call
+	GetChangedStrategies() ([]util.SchedulingStrategy, []util.SchedulingStrategy)
 }
 
 type Scheduler struct {

@@ -5,6 +5,7 @@ import (
 
 	"github.com/Gthulhu/plugin/models"
 	reg "github.com/Gthulhu/plugin/plugin/internal/registry"
+	"github.com/Gthulhu/plugin/plugin/util"
 )
 
 // TestGthulhuPluginInstanceIsolation verifies that multiple GthulhuPlugin instances maintain independent state
@@ -103,7 +104,7 @@ func TestGthulhuPluginUpdateStrategyMap(t *testing.T) {
 	gthulhuPlugin := NewGthulhuPlugin(0, 0)
 
 	// Create test strategies
-	strategies := []SchedulingStrategy{
+	strategies := []util.SchedulingStrategy{
 		{PID: 100, Priority: true, ExecutionTime: 10000},
 		{PID: 200, Priority: false, ExecutionTime: 20000},
 	}
@@ -359,7 +360,7 @@ func TestGthulhuPluginRuntimeSimulation(t *testing.T) {
 		gthulhuPlugin = NewGthulhuPlugin(5000*1000, 500*1000) // Reset plugin
 
 		// Set up scheduling strategies
-		strategies := []SchedulingStrategy{
+		strategies := []util.SchedulingStrategy{
 			{PID: 100, Priority: true, ExecutionTime: 10000000},  // 10ms
 			{PID: 200, Priority: false, ExecutionTime: 20000000}, // 20ms
 		}
