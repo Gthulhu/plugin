@@ -163,6 +163,10 @@ func (m *MockScheduler) DefaultSelectCPU(t *models.QueuedTask) (error, int32) {
 	return nil, cpu
 }
 
+func (m *MockScheduler) GetNrQueued() uint64 {
+	return uint64(len(m.taskQueue) - m.queueIndex)
+}
+
 // Reset resets the mock scheduler state
 func (m *MockScheduler) Reset() {
 	m.taskQueue = make([]*models.QueuedTask, 0)

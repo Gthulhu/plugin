@@ -12,6 +12,7 @@ import (
 type Sched interface {
 	DequeueTask(task *models.QueuedTask)
 	DefaultSelectCPU(t *models.QueuedTask) (error, int32)
+	GetNrQueued() uint64
 }
 
 type CustomScheduler interface {
