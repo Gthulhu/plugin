@@ -354,7 +354,8 @@ func TestMultiplePluginInstances(t *testing.T) {
 				PublicKeyPath: "/path/to/key",
 				BaseURL:       "https://api.example.com",
 				Interval:      10,
-			}}
+			},
+		}
 		simpleConfig := &plugin.SchedConfig{Mode: "simple"}
 		fifoConfig := &plugin.SchedConfig{Mode: "simple-fifo"}
 
@@ -431,4 +432,8 @@ func (s *testSched) DequeueTask(task *models.QueuedTask) {
 
 func (s *testSched) DefaultSelectCPU(t *models.QueuedTask) (error, int32) {
 	return nil, 0
+}
+
+func (s *testSched) GetNrQueued() uint64 {
+	return uint64(len(s.tasks) - s.index)
 }
