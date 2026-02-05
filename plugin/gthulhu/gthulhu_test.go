@@ -316,10 +316,17 @@ func TestGthulhuPluginRuntimeSimulation(t *testing.T) {
 			mockSched.EnqueueTask(task)
 		}
 
-		// Drain all tasks
-		drained := gthulhuPlugin.DrainQueuedTask(mockSched)
-		if drained != 3 {
-			t.Errorf("DrainQueuedTask = %d; want 3", drained)
+		// Drain all tasks (one at a time as per the designed behavior)
+		totalDrained := 0
+		for i := 0; i < 3; i++ {
+			drained := gthulhuPlugin.DrainQueuedTask(mockSched)
+			totalDrained += drained
+			if drained != 1 {
+				t.Errorf("DrainQueuedTask call %d = %d; want 1", i+1, drained)
+			}
+		}
+		if totalDrained != 3 {
+			t.Errorf("Total drained = %d; want 3", totalDrained)
 		}
 
 		// Verify pool count
@@ -381,10 +388,17 @@ func TestGthulhuPluginRuntimeSimulation(t *testing.T) {
 			mockSched.EnqueueTask(task)
 		}
 
-		// Drain tasks
-		drained := gthulhuPlugin.DrainQueuedTask(mockSched)
-		if drained != 3 {
-			t.Errorf("DrainQueuedTask = %d; want 3", drained)
+		// Drain tasks (one at a time as per the designed behavior)
+		totalDrained := 0
+		for i := 0; i < 3; i++ {
+			drained := gthulhuPlugin.DrainQueuedTask(mockSched)
+			totalDrained += drained
+			if drained != 1 {
+				t.Errorf("DrainQueuedTask call %d = %d; want 1", i+1, drained)
+			}
+		}
+		if totalDrained != 3 {
+			t.Errorf("Total drained = %d; want 3", totalDrained)
 		}
 
 		// Process tasks and check time slices
@@ -461,8 +475,11 @@ func TestGthulhuPluginRuntimeSimulation(t *testing.T) {
 
 		sched2.EnqueueTask(&models.QueuedTask{Pid: 200, Weight: 100, Tgid: 200})
 
-		// Drain tasks in both plugins
-		drained1 := plugin1.DrainQueuedTask(sched1)
+		// Drain tasks in both plugins (one at a time as per the designed behavior)
+		drained1 := 0
+		for i := 0; i < 2; i++ {
+			drained1 += plugin1.DrainQueuedTask(sched1)
+		}
 		drained2 := plugin2.DrainQueuedTask(sched2)
 
 		if drained1 != 2 {

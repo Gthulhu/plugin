@@ -95,10 +95,14 @@ func TestGthulhuPluginThroughFactory(t *testing.T) {
 			},
 		}
 
-		// Drain tasks
-		drained := scheduler.DrainQueuedTask(mockSched)
-		if drained != 2 {
-			t.Errorf("Expected to drain 2 tasks, got %d", drained)
+		// Drain tasks (one at a time)
+		totalDrained := 0
+		for i := 0; i < 2; i++ {
+			drained := scheduler.DrainQueuedTask(mockSched)
+			totalDrained += drained
+		}
+		if totalDrained != 2 {
+			t.Errorf("Expected to drain 2 tasks, got %d", totalDrained)
 		}
 
 		// Check pool count
