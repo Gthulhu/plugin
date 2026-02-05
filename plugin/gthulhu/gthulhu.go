@@ -148,7 +148,7 @@ func (g *GthulhuPlugin) drainQueuedTask(s reg.Sched) int {
 		}
 		var newQueuedTask models.QueuedTask
 		s.DequeueTask(&newQueuedTask)
-		if newQueuedTask.Pid == -1 || count == int(s.GetNrQueued()) {
+		if newQueuedTask.Pid == -1 {
 			g.poolMu.Unlock()
 			return count
 		}
