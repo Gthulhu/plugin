@@ -146,11 +146,6 @@ func (g *GthulhuPlugin) drainQueuedTask(s reg.Sched) int {
 			g.poolMu.Unlock()
 			break
 		}
-		// Drain one task at a time to maintain lock granularity
-		if count >= 1 {
-			g.poolMu.Unlock()
-			return count
-		}
 		var newQueuedTask models.QueuedTask
 		s.DequeueTask(&newQueuedTask)
 		if newQueuedTask.Pid == -1 {
@@ -168,6 +163,10 @@ func (g *GthulhuPlugin) drainQueuedTask(s reg.Sched) int {
 		g.taskPoolCount++
 		g.poolMu.Unlock()
 		count++
+		// Drain one task at a time to maintain lock granularity
+		if count >= 1 {
+			return count
+		}
 	}
 	return count
 }
