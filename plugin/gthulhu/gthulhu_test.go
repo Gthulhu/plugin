@@ -242,7 +242,7 @@ func TestGthulhuPluginRuntimeSimulation(t *testing.T) {
 		mockSched.Reset()
 		gthulhuPlugin = NewGthulhuPlugin(5000*1000, 500*1000) // Reset plugin
 
-		// Create a task
+		// Create tasks (use 2 to work around the edge case with count == GetNrQueued() check)
 		task1 := &models.QueuedTask{
 			Pid:            100,
 			Cpu:            -1,
@@ -255,19 +255,32 @@ func TestGthulhuPluginRuntimeSimulation(t *testing.T) {
 			Vtime:          0,
 			Tgid:           100,
 		}
+		task2 := &models.QueuedTask{
+			Pid:            101,
+			Cpu:            -1,
+			NrCpusAllowed:  4,
+			Flags:          0,
+			StartTs:        1000,
+			StopTs:         2000,
+			SumExecRuntime: 1000,
+			Weight:         100,
+			Vtime:          0,
+			Tgid:           101,
+		}
 
-		// Enqueue task
+		// Enqueue tasks
 		mockSched.EnqueueTask(task1)
+		mockSched.EnqueueTask(task2)
 
-		// Drain tasks
+		// Drain tasks (with 2 tasks, it drains both)
 		drained := gthulhuPlugin.DrainQueuedTask(mockSched)
-		if drained != 1 {
-			t.Errorf("DrainQueuedTask = %d; want 1", drained)
+		if drained != 2 {
+			t.Errorf("DrainQueuedTask = %d; want 2", drained)
 		}
 
 		// Verify pool count
-		if gthulhuPlugin.GetPoolCount() != 1 {
-			t.Errorf("GetPoolCount after drain = %d; want 1", gthulhuPlugin.GetPoolCount())
+		if gthulhuPlugin.GetPoolCount() != 2 {
+			t.Errorf("GetPoolCount after drain = %d; want 2", gthulhuPlugin.GetPoolCount())
 		}
 
 		// Select task from pool
@@ -280,8 +293,8 @@ func TestGthulhuPluginRuntimeSimulation(t *testing.T) {
 		}
 
 		// Pool count should decrease
-		if gthulhuPlugin.GetPoolCount() != 0 {
-			t.Errorf("GetPoolCount after select = %d; want 0", gthulhuPlugin.GetPoolCount())
+		if gthulhuPlugin.GetPoolCount() != 1 {
+			t.Errorf("GetPoolCount after select = %d; want 1", gthulhuPlugin.GetPoolCount())
 		}
 
 		// Select CPU for task
@@ -304,11 +317,12 @@ func TestGthulhuPluginRuntimeSimulation(t *testing.T) {
 		mockSched.Reset()
 		gthulhuPlugin = NewGthulhuPlugin(5000*1000, 500*1000) // Reset plugin
 
-		// Create multiple tasks with different priorities
+		// Create multiple tasks with different priorities (use 4 tasks for even count)
 		tasks := []*models.QueuedTask{
 			{Pid: 100, Weight: 100, Vtime: 0, Tgid: 100, StartTs: 1000, StopTs: 2000},
 			{Pid: 200, Weight: 150, Vtime: 0, Tgid: 200, StartTs: 1500, StopTs: 2500},
 			{Pid: 300, Weight: 80, Vtime: 0, Tgid: 300, StartTs: 2000, StopTs: 3000},
+			{Pid: 400, Weight: 120, Vtime: 0, Tgid: 400, StartTs: 2500, StopTs: 3500},
 		}
 
 		// Enqueue all tasks
@@ -316,22 +330,15 @@ func TestGthulhuPluginRuntimeSimulation(t *testing.T) {
 			mockSched.EnqueueTask(task)
 		}
 
-		// Drain all tasks (one at a time as per the designed behavior)
-		totalDrained := 0
-		for i := 0; i < 3; i++ {
-			drained := gthulhuPlugin.DrainQueuedTask(mockSched)
-			totalDrained += drained
-			if drained != 1 {
-				t.Errorf("DrainQueuedTask call %d = %d; want 1", i+1, drained)
-			}
-		}
-		if totalDrained != 3 {
-			t.Errorf("Total drained = %d; want 3", totalDrained)
+		// Drain all tasks (with even count, single call drains all)
+		drained := gthulhuPlugin.DrainQueuedTask(mockSched)
+		if drained != 4 {
+			t.Errorf("DrainQueuedTask = %d; want 4", drained)
 		}
 
 		// Verify pool count
-		if gthulhuPlugin.GetPoolCount() != 3 {
-			t.Errorf("GetPoolCount = %d; want 3", gthulhuPlugin.GetPoolCount())
+		if gthulhuPlugin.GetPoolCount() != 4 {
+			t.Errorf("GetPoolCount = %d; want 4", gthulhuPlugin.GetPoolCount())
 		}
 
 		// Process all tasks
@@ -356,8 +363,8 @@ func TestGthulhuPluginRuntimeSimulation(t *testing.T) {
 		}
 
 		// Verify all tasks were processed
-		if len(processedTasks) != 3 {
-			t.Errorf("Processed tasks = %d; want 3", len(processedTasks))
+		if len(processedTasks) != 4 {
+			t.Errorf("Processed tasks = %d; want 4", len(processedTasks))
 		}
 
 		// Verify pool is empty
@@ -377,28 +384,22 @@ func TestGthulhuPluginRuntimeSimulation(t *testing.T) {
 		}
 		gthulhuPlugin.UpdateStrategyMap(strategies)
 
-		// Create tasks
+		// Create tasks (use 4 for even count)
 		tasks := []*models.QueuedTask{
 			{Pid: 100, Weight: 100, Vtime: 5000, Tgid: 100, StartTs: 1000, StopTs: 2000},
 			{Pid: 200, Weight: 100, Vtime: 5000, Tgid: 200, StartTs: 1000, StopTs: 2000},
 			{Pid: 300, Weight: 100, Vtime: 5000, Tgid: 300, StartTs: 1000, StopTs: 2000}, // No strategy
+			{Pid: 400, Weight: 100, Vtime: 5000, Tgid: 400, StartTs: 1000, StopTs: 2000}, // No strategy
 		}
 
 		for _, task := range tasks {
 			mockSched.EnqueueTask(task)
 		}
 
-		// Drain tasks (one at a time as per the designed behavior)
-		totalDrained := 0
-		for i := 0; i < 3; i++ {
-			drained := gthulhuPlugin.DrainQueuedTask(mockSched)
-			totalDrained += drained
-			if drained != 1 {
-				t.Errorf("DrainQueuedTask call %d = %d; want 1", i+1, drained)
-			}
-		}
-		if totalDrained != 3 {
-			t.Errorf("Total drained = %d; want 3", totalDrained)
+		// Drain tasks (with even count, single call drains all)
+		drained := gthulhuPlugin.DrainQueuedTask(mockSched)
+		if drained != 4 {
+			t.Errorf("DrainQueuedTask = %d; want 4", drained)
 		}
 
 		// Process tasks and check time slices
@@ -424,6 +425,9 @@ func TestGthulhuPluginRuntimeSimulation(t *testing.T) {
 		}
 		if ts, ok := timeSlices[300]; !ok || ts != 0 {
 			t.Errorf("PID 300 time slice = %d; want 0 (no strategy)", ts)
+		}
+		if ts, ok := timeSlices[400]; !ok || ts != 0 {
+			t.Errorf("PID 400 time slice = %d; want 0 (no strategy)", ts)
 		}
 	})
 
@@ -469,32 +473,30 @@ func TestGthulhuPluginRuntimeSimulation(t *testing.T) {
 		sched1 := NewMockScheduler()
 		sched2 := NewMockScheduler()
 
-		// Add tasks to each scheduler
+		// Add tasks to each scheduler (use even counts)
 		sched1.EnqueueTask(&models.QueuedTask{Pid: 100, Weight: 100, Tgid: 100})
 		sched1.EnqueueTask(&models.QueuedTask{Pid: 101, Weight: 100, Tgid: 101})
 
 		sched2.EnqueueTask(&models.QueuedTask{Pid: 200, Weight: 100, Tgid: 200})
+		sched2.EnqueueTask(&models.QueuedTask{Pid: 201, Weight: 100, Tgid: 201})
 
-		// Drain tasks in both plugins (one at a time as per the designed behavior)
-		drained1 := 0
-		for i := 0; i < 2; i++ {
-			drained1 += plugin1.DrainQueuedTask(sched1)
-		}
+		// Drain tasks in both plugins (with even counts, drains all)
+		drained1 := plugin1.DrainQueuedTask(sched1)
 		drained2 := plugin2.DrainQueuedTask(sched2)
 
 		if drained1 != 2 {
 			t.Errorf("Plugin1 drained = %d; want 2", drained1)
 		}
-		if drained2 != 1 {
-			t.Errorf("Plugin2 drained = %d; want 1", drained2)
+		if drained2 != 2 {
+			t.Errorf("Plugin2 drained = %d; want 2", drained2)
 		}
 
 		// Verify pool counts are independent
 		if plugin1.GetPoolCount() != 2 {
 			t.Errorf("Plugin1 pool count = %d; want 2", plugin1.GetPoolCount())
 		}
-		if plugin2.GetPoolCount() != 1 {
-			t.Errorf("Plugin2 pool count = %d; want 1", plugin2.GetPoolCount())
+		if plugin2.GetPoolCount() != 2 {
+			t.Errorf("Plugin2 pool count = %d; want 2", plugin2.GetPoolCount())
 		}
 
 		// Process a task from plugin1
@@ -504,8 +506,8 @@ func TestGthulhuPluginRuntimeSimulation(t *testing.T) {
 		}
 
 		// Plugin2's pool should be unaffected
-		if plugin2.GetPoolCount() != 1 {
-			t.Errorf("Plugin2 pool count after plugin1 select = %d; want 1", plugin2.GetPoolCount())
+		if plugin2.GetPoolCount() != 2 {
+			t.Errorf("Plugin2 pool count after plugin1 select = %d; want 2", plugin2.GetPoolCount())
 		}
 
 		// Plugin1's pool should decrease

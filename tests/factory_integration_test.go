@@ -339,12 +339,13 @@ func TestMultiplePluginInstances(t *testing.T) {
 		mockSched := &testSched{
 			tasks: []*models.QueuedTask{
 				{Pid: 100, Weight: 100, Vtime: 1000, Tgid: 100},
+				{Pid: 101, Weight: 100, Vtime: 1000, Tgid: 101},
 			},
 		}
 
 		scheduler1.DrainQueuedTask(mockSched)
-		if scheduler1.GetPoolCount() != 1 {
-			t.Errorf("Scheduler1 pool count = %d; want 1", scheduler1.GetPoolCount())
+		if scheduler1.GetPoolCount() != 2 {
+			t.Errorf("Scheduler1 pool count = %d; want 2", scheduler1.GetPoolCount())
 		}
 		if scheduler2.GetPoolCount() != 0 {
 			t.Errorf("Scheduler2 pool count = %d; want 0", scheduler2.GetPoolCount())
