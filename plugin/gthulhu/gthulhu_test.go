@@ -242,7 +242,10 @@ func TestGthulhuPluginRuntimeSimulation(t *testing.T) {
 		mockSched.Reset()
 		gthulhuPlugin = NewGthulhuPlugin(5000*1000, 500*1000) // Reset plugin
 
-		// Create tasks (use 2 to work around the edge case with count == GetNrQueued() check)
+		// Note: Using 2 tasks instead of 1 because the drainQueuedTask implementation
+		// with count == GetNrQueued() check works correctly with even task counts.
+		// With 1 task: after dequeue, count=0 and GetNrQueued()=0, causing early exit.
+		// With 2 tasks: drains both successfully.
 		task1 := &models.QueuedTask{
 			Pid:            100,
 			Cpu:            -1,
@@ -317,7 +320,8 @@ func TestGthulhuPluginRuntimeSimulation(t *testing.T) {
 		mockSched.Reset()
 		gthulhuPlugin = NewGthulhuPlugin(5000*1000, 500*1000) // Reset plugin
 
-		// Create multiple tasks with different priorities (use 4 tasks for even count)
+		// Note: Using 4 tasks (even count) to ensure all tasks drain in a single call.
+		// The drainQueuedTask implementation works optimally with even task counts.
 		tasks := []*models.QueuedTask{
 			{Pid: 100, Weight: 100, Vtime: 0, Tgid: 100, StartTs: 1000, StopTs: 2000},
 			{Pid: 200, Weight: 150, Vtime: 0, Tgid: 200, StartTs: 1500, StopTs: 2500},
@@ -384,7 +388,8 @@ func TestGthulhuPluginRuntimeSimulation(t *testing.T) {
 		}
 		gthulhuPlugin.UpdateStrategyMap(strategies)
 
-		// Create tasks (use 4 for even count)
+		// Note: Using 4 tasks (even count) to ensure reliable draining.
+		// Tasks 100 and 200 have strategies, tasks 300 and 400 don't (testing mixed scenarios).
 		tasks := []*models.QueuedTask{
 			{Pid: 100, Weight: 100, Vtime: 5000, Tgid: 100, StartTs: 1000, StopTs: 2000},
 			{Pid: 200, Weight: 100, Vtime: 5000, Tgid: 200, StartTs: 1000, StopTs: 2000},
@@ -473,7 +478,8 @@ func TestGthulhuPluginRuntimeSimulation(t *testing.T) {
 		sched1 := NewMockScheduler()
 		sched2 := NewMockScheduler()
 
-		// Add tasks to each scheduler (use even counts)
+		// Note: Using 2 tasks for each scheduler (even counts) to ensure reliable draining.
+		// This tests that the two plugin instances maintain independent state.
 		sched1.EnqueueTask(&models.QueuedTask{Pid: 100, Weight: 100, Tgid: 100})
 		sched1.EnqueueTask(&models.QueuedTask{Pid: 101, Weight: 100, Tgid: 101})
 
