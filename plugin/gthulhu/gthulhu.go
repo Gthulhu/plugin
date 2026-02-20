@@ -287,7 +287,7 @@ func (g *GthulhuPlugin) applySchedulingStrategy(task *models.QueuedTask) bool {
 	g.strategyMu.RUnlock()
 	if exists {
 		// Apply strategy
-		if strategy.Priority {
+		if strategy.Priority > 0 {
 			// Priority tasks get minimum vtime
 			task.Vtime = 0
 		}

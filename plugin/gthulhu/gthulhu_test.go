@@ -105,8 +105,8 @@ func TestGthulhuPluginUpdateStrategyMap(t *testing.T) {
 
 	// Create test strategies
 	strategies := []util.SchedulingStrategy{
-		{PID: 100, Priority: true, ExecutionTime: 10000},
-		{PID: 200, Priority: false, ExecutionTime: 20000},
+		{PID: 100, Priority: 1, ExecutionTime: 10000},
+		{PID: 200, Priority: 0, ExecutionTime: 20000},
 	}
 
 	// Update strategy map
@@ -121,8 +121,8 @@ func TestGthulhuPluginUpdateStrategyMap(t *testing.T) {
 	if strategy, exists := gthulhuPlugin.strategyMap[100]; !exists {
 		t.Error("Strategy for PID 100 not found")
 	} else {
-		if !strategy.Priority {
-			t.Error("Strategy for PID 100 should have Priority=true")
+		if strategy.Priority <= 0 {
+			t.Error("Strategy for PID 100 should have Priority=1")
 		}
 		if strategy.ExecutionTime != 10000 {
 			t.Errorf("Strategy for PID 100 ExecutionTime = %d; want 10000", strategy.ExecutionTime)
@@ -133,8 +133,8 @@ func TestGthulhuPluginUpdateStrategyMap(t *testing.T) {
 	if strategy, exists := gthulhuPlugin.strategyMap[200]; !exists {
 		t.Error("Strategy for PID 200 not found")
 	} else {
-		if strategy.Priority {
-			t.Error("Strategy for PID 200 should have Priority=false")
+		if strategy.Priority > 0 {
+			t.Error("Strategy for PID 200 should have Priority=0")
 		}
 		if strategy.ExecutionTime != 20000 {
 			t.Errorf("Strategy for PID 200 ExecutionTime = %d; want 20000", strategy.ExecutionTime)
@@ -383,8 +383,8 @@ func TestGthulhuPluginRuntimeSimulation(t *testing.T) {
 
 		// Set up scheduling strategies
 		strategies := []util.SchedulingStrategy{
-			{PID: 100, Priority: true, ExecutionTime: 10000000},  // 10ms
-			{PID: 200, Priority: false, ExecutionTime: 20000000}, // 20ms
+			{PID: 100, Priority: 1, ExecutionTime: 10000000}, // 10ms
+			{PID: 200, Priority: 0, ExecutionTime: 20000000}, // 20ms
 		}
 		gthulhuPlugin.UpdateStrategyMap(strategies)
 
