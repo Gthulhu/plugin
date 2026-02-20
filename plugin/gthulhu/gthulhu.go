@@ -404,11 +404,14 @@ func (g *GthulhuPlugin) caculateChangedStrategies() ([]util.SchedulingStrategy, 
 // Campare g.oldStrategyMap and g.strategyMap and return the list of SchedulingStrategy that have changed strategies
 func (g *GthulhuPlugin) GetChangedStrategies() ([]util.SchedulingStrategy, []util.SchedulingStrategy) {
 	changed := []util.SchedulingStrategy{}
+	removed := []util.SchedulingStrategy{}
 	g.strategyMu.RLock()
 	defer g.strategyMu.RUnlock()
 
 	// copy g.newStrategy to changed and clear g.newStrategy
 	changed = append(changed, g.newStrategy...)
+	removed = append(removed, g.removedStrategy...)
 	g.newStrategy = []util.SchedulingStrategy{}
-	return changed, nil
+	g.removedStrategy = []util.SchedulingStrategy{}
+	return changed, removed
 }
