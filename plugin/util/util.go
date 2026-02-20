@@ -4,7 +4,7 @@ import "time"
 
 // SchedulingStrategy represents a strategy for process scheduling
 type SchedulingStrategy struct {
-	Priority      bool   `json:"priority"`       // If true, set vtime to minimum vtime
+	Priority      int    `json:"priority"`       // If > 0, set vtime to minimum vtime
 	ExecutionTime uint64 `json:"execution_time"` // Time slice for this process in nanoseconds
 	PID           int    `json:"pid"`            // Process ID to apply this strategy to
 }
