@@ -383,7 +383,7 @@ func TestGthulhuPluginRuntimeSimulation(t *testing.T) {
 
 		// Set up scheduling strategies
 		strategies := []util.SchedulingStrategy{
-			{PID: 100, Priority: 1, ExecutionTime: 10000000},  // 10ms
+			{PID: 100, Priority: 1, ExecutionTime: 10000000}, // 10ms
 			{PID: 200, Priority: 0, ExecutionTime: 20000000}, // 20ms
 		}
 		gthulhuPlugin.UpdateStrategyMap(strategies)
