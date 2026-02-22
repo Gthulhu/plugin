@@ -198,10 +198,13 @@ func TestNewJWTClientMTLSEndToEnd(t *testing.T) {
 	if err != nil {
 		t.Fatalf("MakeAuthenticatedRequest over mTLS: %v", err)
 	}
-	defer resp.Body.Close()
+	defer func() {
+		if err := resp.Body.Close(); err != nil {
+			t.Logf("resp.Body.Close(): %v", err)
+		}
+	}()
 
 	if resp.StatusCode != http.StatusOK {
 		t.Errorf("status = %d; want %d", resp.StatusCode, http.StatusOK)
 	}
 }
-
