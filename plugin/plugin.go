@@ -11,6 +11,7 @@ type (
 	Sched           = reg.Sched
 	CustomScheduler = reg.CustomScheduler
 	Scheduler       = reg.Scheduler
+	MTLSConfig      = reg.MTLSConfig
 	APIConfig       = reg.APIConfig
 	SchedConfig     = reg.SchedConfig
 	PluginFactory   = reg.PluginFactory

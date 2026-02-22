@@ -38,12 +38,23 @@ type Scheduler struct {
 	SliceNsMin     uint64 `yaml:"slice_ns_min"`
 }
 
+// MTLSConfig holds the mutual TLS configuration used for plugin → API server communication.
+// CertPem and KeyPem are the plugin's own certificate/key pair signed by the private CA.
+// CAPem is the private CA certificate used to verify the API server's certificate.
+type MTLSConfig struct {
+	Enable  bool   `yaml:"enable"`
+	CertPem string `yaml:"cert_pem"`
+	KeyPem  string `yaml:"key_pem"`
+	CAPem   string `yaml:"ca_pem"`
+}
+
 type APIConfig struct {
-	PublicKeyPath string `yaml:"public_key_path"`
-	BaseURL       string `yaml:"base_url"`
-	Interval      int    `yaml:"interval"`
-	Enabled       bool   `yaml:"enabled"`
-	AuthEnabled   bool   `yaml:"auth_enabled"`
+	PublicKeyPath string     `yaml:"public_key_path"`
+	BaseURL       string     `yaml:"base_url"`
+	Interval      int        `yaml:"interval"`
+	Enabled       bool       `yaml:"enabled"`
+	AuthEnabled   bool       `yaml:"auth_enabled"`
+	MTLS          MTLSConfig `yaml:"mtls"`
 }
 
 // SchedConfig holds the configuration parameters for creating a scheduler plugin
