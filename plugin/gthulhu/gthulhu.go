@@ -34,6 +34,7 @@ func init() {
 				config.APIConfig.PublicKeyPath,
 				config.APIConfig.BaseURL,
 				config.APIConfig.AuthEnabled,
+				config.APIConfig.MTLS,
 			)
 			if err != nil {
 				return nil, err
@@ -312,8 +313,13 @@ func (g *GthulhuPlugin) InitJWTClient(
 	publicKeyPath,
 	apiBaseURL string,
 	authEnabled bool,
+	mtlsCfg reg.MTLSConfig,
 ) error {
-	g.jwtClient = NewJWTClient(publicKeyPath, apiBaseURL, authEnabled)
+	client, err := NewJWTClient(publicKeyPath, apiBaseURL, authEnabled, mtlsCfg)
+	if err != nil {
+		return err
+	}
+	g.jwtClient = client
 	return nil
 }
 

@@ -2,6 +2,7 @@ package gthulhu
 
 import (
 	"bytes"
+	"crypto/tls"
 	"crypto/x509"
 	"encoding/json"
 	"encoding/pem"
@@ -11,6 +12,8 @@ import (
 	"os"
 	"strings"
 	"time"
+
+	reg "github.com/Gthulhu/plugin/plugin/internal/registry"
 )
 
 // TokenRequest represents the request structure for JWT token generation
@@ -47,20 +50,65 @@ type JWTClient struct {
 	authEnabled    bool
 }
 
-// NewJWTClient creates a new JWT client
+// NewJWTClient creates a new JWT client. When mtlsCfg.Enable is true the
+// underlying HTTP client is configured with mutual TLS so the plugin
+// authenticates itself to the API server and verifies the server certificate
+// against the shared CA.
 func NewJWTClient(
 	publicKeyPath,
 	apiBaseURL string,
 	authEnabled bool,
-) *JWTClient {
+	mtlsCfg reg.MTLSConfig,
+) (*JWTClient, error) {
+	httpClient := &http.Client{
+		Timeout: 30 * time.Second,
+	}
+
+	if mtlsCfg.Enable {
+		tlsClient, err := buildMTLSClient(mtlsCfg)
+		if err != nil {
+			return nil, err
+		}
+		httpClient = tlsClient
+	}
+
 	return &JWTClient{
 		publicKeyPath: publicKeyPath,
 		apiBaseURL:    strings.TrimSuffix(apiBaseURL, "/"),
-		httpClient: &http.Client{
-			Timeout: 30 * time.Second,
-		},
-		authEnabled: authEnabled,
+		httpClient:    httpClient,
+		authEnabled:   authEnabled,
+	}, nil
+}
+
+// buildMTLSClient constructs an HTTP client with mutual TLS configured.
+func buildMTLSClient(mtlsCfg reg.MTLSConfig) (*http.Client, error) {
+	cert, err := tls.X509KeyPair([]byte(mtlsCfg.CertPem), []byte(mtlsCfg.KeyPem))
+	if err != nil {
+		return nil, fmt.Errorf("load mTLS client certificate: %w", err)
 	}
+
+	caPool := x509.NewCertPool()
+	if !caPool.AppendCertsFromPEM([]byte(mtlsCfg.CAPem)) {
+		return nil, fmt.Errorf("parse mTLS CA certificate")
+	}
+
+	tlsCfg := &tls.Config{
+		Certificates: []tls.Certificate{cert},
+		RootCAs:      caPool,
+		MinVersion:   tls.VersionTLS12,
+	}
+
+	defaultTransport, ok := http.DefaultTransport.(*http.Transport)
+	if !ok {
+		return nil, fmt.Errorf("unexpected default transport type %T", http.DefaultTransport)
+	}
+	mtlsTransport := defaultTransport.Clone()
+	mtlsTransport.TLSClientConfig = tlsCfg
+
+	return &http.Client{
+		Timeout:   30 * time.Second,
+		Transport: mtlsTransport,
+	}, nil
 }
 
 // loadPublicKey loads the RSA public key from PEM file
@@ -161,12 +209,18 @@ func (c *JWTClient) GetAuthenticatedClient() (*http.Client, error) {
 		return nil, err
 	}
 
+	// Preserve any custom transport (e.g. mTLS) already configured on the client.
+	transport := c.httpClient.Transport
+	if transport == nil {
+		transport = http.DefaultTransport
+	}
+
 	// Create a custom transport that adds the Authorization header
 	client := &http.Client{
 		Timeout: 30 * time.Second,
 		Transport: &authenticatedTransport{
 			token:     c.token,
-			transport: http.DefaultTransport,
+			transport: transport,
 		},
 	}
 
