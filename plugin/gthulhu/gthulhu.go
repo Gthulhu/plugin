@@ -130,7 +130,7 @@ func (g *GthulhuPlugin) SelectCPU(s reg.Sched, t *models.QueuedTask) (error, int
 }
 
 func (g *GthulhuPlugin) DetermineTimeSlice(s reg.Sched, t *models.QueuedTask) uint64 {
-	return g.getTaskExecutionTime(t.Pid)
+	return g.getTaskExecutionTime(t)
 }
 
 func (g *GthulhuPlugin) GetPoolCount() uint64 {
@@ -281,31 +281,47 @@ func lessQueuedTask(a, b *Task) bool {
 	return a.QueuedTask.Pid < b.QueuedTask.Pid
 }
 
-// applySchedulingStrategy applies scheduling strategies to a task
+// applySchedulingStrategy gives a task minimum vtime when a matching strategy
+// boosts it (Priority > 0), and reports whether it was boosted. A strategy that
+// only sets a custom time slice (Priority == 0) must not jump the run queue, so
+// it reports false here; getTaskExecutionTime still supplies its slice.
 func (g *GthulhuPlugin) applySchedulingStrategy(task *models.QueuedTask) bool {
-	g.strategyMu.RLock()
-	strategy, exists := g.strategyMap[task.Tgid]
-	g.strategyMu.RUnlock()
-	if exists {
-		// Apply strategy
-		if strategy.Priority > 0 {
-			// Priority tasks get minimum vtime
-			task.Vtime = 0
-		}
-		return true
+	strategy, exists := g.lookupTaskStrategy(task)
+	if !exists || strategy.Priority <= 0 {
+		return false
 	}
-	return false
+	task.Vtime = 0
+	return true
 }
 
-// getTaskExecutionTime returns the custom execution time for a task if defined
-func (g *GthulhuPlugin) getTaskExecutionTime(pid int32) uint64 {
-	g.strategyMu.RLock()
-	strategy, exists := g.strategyMap[pid]
-	g.strategyMu.RUnlock()
+// getTaskExecutionTime returns the custom time slice for a task, or 0 when no
+// matching strategy defines one.
+func (g *GthulhuPlugin) getTaskExecutionTime(task *models.QueuedTask) uint64 {
+	strategy, exists := g.lookupTaskStrategy(task)
 	if exists && strategy.ExecutionTime > 0 {
 		return strategy.ExecutionTime
 	}
 	return 0
+}
+
+// lookupTaskStrategy returns the strategy for a task, preferring an exact
+// thread (TID) match over a thread-group (TGID) match. Node policies key by
+// TID, so a thread-specific rule wins; Pod policies key by the group leader's
+// PID, so every thread of the group still resolves through the TGID fallback.
+// Priority and time-slice must share this lookup, or one strategy would act
+// differently between the two paths.
+func (g *GthulhuPlugin) lookupTaskStrategy(task *models.QueuedTask) (util.SchedulingStrategy, bool) {
+	g.strategyMu.RLock()
+	defer g.strategyMu.RUnlock()
+	if strategy, ok := g.strategyMap[task.Pid]; ok {
+		return strategy, true
+	}
+	if task.Tgid != task.Pid {
+		if strategy, ok := g.strategyMap[task.Tgid]; ok {
+			return strategy, true
+		}
+	}
+	return util.SchedulingStrategy{}, false
 }
 
 // InitJWTClient initializes the JWT client for API authentication
@@ -407,14 +423,16 @@ func (g *GthulhuPlugin) caculateChangedStrategies() ([]util.SchedulingStrategy, 
 	return changed, removed
 }
 
-// Campare g.oldStrategyMap and g.strategyMap and return the list of SchedulingStrategy that have changed strategies
+// GetChangedStrategies drains and returns the strategies queued as changed and
+// removed since the last call.
 func (g *GthulhuPlugin) GetChangedStrategies() ([]util.SchedulingStrategy, []util.SchedulingStrategy) {
 	changed := []util.SchedulingStrategy{}
 	removed := []util.SchedulingStrategy{}
-	g.strategyMu.RLock()
-	defer g.strategyMu.RUnlock()
+	// A write lock is required: this drains (reads then clears) the pending
+	// change queues, so a read lock would race concurrent callers and updates.
+	g.strategyMu.Lock()
+	defer g.strategyMu.Unlock()
 
-	// copy g.newStrategy to changed and clear g.newStrategy
 	changed = append(changed, g.newStrategy...)
 	removed = append(removed, g.removedStrategy...)
 	g.newStrategy = []util.SchedulingStrategy{}
