@@ -1,12 +1,18 @@
 package gthulhu
 
 import (
+	"sync"
 	"testing"
 
 	"github.com/Gthulhu/plugin/models"
 	reg "github.com/Gthulhu/plugin/plugin/internal/registry"
 	"github.com/Gthulhu/plugin/plugin/util"
 )
+
+// makeTask builds a QueuedTask identified by its thread (TID) and group (TGID).
+func makeTask(tid, tgid int32) *models.QueuedTask {
+	return &models.QueuedTask{Pid: tid, Tgid: tgid}
+}
 
 // TestGthulhuPluginInstanceIsolation verifies that multiple GthulhuPlugin instances maintain independent state
 func TestGthulhuPluginInstanceIsolation(t *testing.T) {
@@ -140,6 +146,130 @@ func TestGthulhuPluginUpdateStrategyMap(t *testing.T) {
 			t.Errorf("Strategy for PID 200 ExecutionTime = %d; want 20000", strategy.ExecutionTime)
 		}
 	}
+}
+
+// TestStrategyLookupPrefersTID verifies a TID-keyed strategy binds to the exact
+// thread for both priority and time slice and does not leak to a sibling thread.
+func TestStrategyLookupPrefersTID(t *testing.T) {
+	g := NewGthulhuPlugin(0, 0)
+	// Node policy on a single worker thread (tid 501) of process 500.
+	g.UpdateStrategyMap([]util.SchedulingStrategy{
+		{PID: 501, Priority: 1, ExecutionTime: 7000},
+	})
+
+	worker := makeTask(501, 500)
+	if !g.applySchedulingStrategy(worker) {
+		t.Fatal("worker thread should match its TID-keyed strategy")
+	}
+	if worker.Vtime != 0 {
+		t.Errorf("priority worker Vtime = %d; want 0", worker.Vtime)
+	}
+	if got := g.getTaskExecutionTime(worker); got != 7000 {
+		t.Errorf("worker execution time = %d; want 7000", got)
+	}
+
+	// A sibling thread of the same group must not inherit a TID-specific rule.
+	sibling := makeTask(502, 500)
+	if g.applySchedulingStrategy(sibling) {
+		t.Error("sibling thread must not match a TID-specific strategy")
+	}
+	if got := g.getTaskExecutionTime(sibling); got != 0 {
+		t.Errorf("sibling execution time = %d; want 0", got)
+	}
+}
+
+// TestStrategyLookupTGIDFallback verifies a group-leader-keyed strategy (a Pod
+// policy) reaches every thread of the group via the TGID fallback, for both
+// priority and time slice.
+func TestStrategyLookupTGIDFallback(t *testing.T) {
+	g := NewGthulhuPlugin(0, 0)
+	g.UpdateStrategyMap([]util.SchedulingStrategy{
+		{PID: 800, Priority: 1, ExecutionTime: 9000},
+	})
+
+	for _, tid := range []int32{800, 801, 802} {
+		task := makeTask(tid, 800)
+		if !g.applySchedulingStrategy(task) {
+			t.Fatalf("thread %d should match via TGID fallback", tid)
+		}
+		if got := g.getTaskExecutionTime(task); got != 9000 {
+			t.Errorf("thread %d execution time = %d; want 9000", tid, got)
+		}
+	}
+}
+
+// TestStrategyLookupTIDWinsOverTGID verifies a thread-specific strategy takes
+// precedence over a group-wide one for that thread.
+func TestStrategyLookupTIDWinsOverTGID(t *testing.T) {
+	g := NewGthulhuPlugin(0, 0)
+	g.UpdateStrategyMap([]util.SchedulingStrategy{
+		{PID: 900, Priority: 1, ExecutionTime: 1000}, // whole group
+		{PID: 901, Priority: 1, ExecutionTime: 2000}, // thread 901 only
+	})
+	if got := g.getTaskExecutionTime(makeTask(901, 900)); got != 2000 {
+		t.Errorf("thread 901 execution time = %d; want 2000 (TID wins)", got)
+	}
+	if got := g.getTaskExecutionTime(makeTask(902, 900)); got != 1000 {
+		t.Errorf("thread 902 execution time = %d; want 1000 (TGID fallback)", got)
+	}
+}
+
+// TestPodPolicySliceAppliesToAllGroupThreads pins a deliberate behavior: a Pod
+// policy keyed by the group leader PID applies its custom time slice to every
+// thread of the group, not just the leader, so the slice fans out the same way
+// priority already does via the TGID. This is an intentional contract - do not
+// narrow it back to leader-only.
+func TestPodPolicySliceAppliesToAllGroupThreads(t *testing.T) {
+	g := NewGthulhuPlugin(0, 0)
+	// Pod policy on leader PID 700, priority left off to isolate the slice.
+	g.UpdateStrategyMap([]util.SchedulingStrategy{
+		{PID: 700, Priority: 0, ExecutionTime: 12345},
+	})
+	if got := g.getTaskExecutionTime(makeTask(700, 700)); got != 12345 {
+		t.Errorf("leader slice = %d; want 12345", got)
+	}
+	if got := g.getTaskExecutionTime(makeTask(701, 700)); got != 12345 {
+		t.Errorf("non-leader thread slice = %d; want 12345 (fans to whole group)", got)
+	}
+}
+
+// TestSliceOnlyStrategyDoesNotJumpQueue verifies a Priority==0 strategy supplies
+// its custom time slice but is not boosted to the front of the run queue.
+func TestSliceOnlyStrategyDoesNotJumpQueue(t *testing.T) {
+	g := NewGthulhuPlugin(0, 0)
+	g.UpdateStrategyMap([]util.SchedulingStrategy{
+		{PID: 600, Priority: 0, ExecutionTime: 4000},
+	})
+	task := makeTask(600, 600)
+	task.Vtime = 999 // sentinel: a non-boost must not reset vtime to 0
+	if g.applySchedulingStrategy(task) {
+		t.Error("a Priority==0 strategy must not report a boost (would force Deadline 0)")
+	}
+	if task.Vtime != 999 {
+		t.Errorf("non-boost strategy changed Vtime to %d; want 999 untouched", task.Vtime)
+	}
+	if got := g.getTaskExecutionTime(task); got != 4000 {
+		t.Errorf("slice-only strategy execution time = %d; want 4000", got)
+	}
+}
+
+// TestGetChangedStrategiesConcurrent drains the change queues from several
+// goroutines at once so the race detector guards the write-lock fix.
+func TestGetChangedStrategiesConcurrent(t *testing.T) {
+	g := NewGthulhuPlugin(0, 0)
+	g.UpdateStrategyMap([]util.SchedulingStrategy{{PID: 1, Priority: 1}})
+
+	var wg sync.WaitGroup
+	for i := 0; i < 4; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			for j := 0; j < 500; j++ {
+				g.GetChangedStrategies()
+			}
+		}()
+	}
+	wg.Wait()
 }
 
 // MockScheduler implements the plugin.Sched interface for testing
