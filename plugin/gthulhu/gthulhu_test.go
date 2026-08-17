@@ -253,6 +253,39 @@ func TestSliceOnlyStrategyDoesNotJumpQueue(t *testing.T) {
 	}
 }
 
+// TestGetChangedStrategiesCoalescesRemoveThenReadd verifies that removing a PID
+// and re-adding it (with a new value) before a drain yields one changed entry
+// and no removal - the scheduler must not end up deleting the re-added key.
+func TestGetChangedStrategiesCoalescesRemoveThenReadd(t *testing.T) {
+	g := NewGthulhuPlugin(0, 0)
+	g.UpdateStrategyMap([]util.SchedulingStrategy{{PID: 42, Priority: 1, ExecutionTime: 100}})
+	if changed, removed := g.GetChangedStrategies(); len(changed) != 1 || len(removed) != 0 {
+		t.Fatalf("baseline drain: changed=%d removed=%d; want 1,0", len(changed), len(removed))
+	}
+	// Remove 42, then re-add it with a new value, both before the next drain.
+	g.UpdateStrategyMap(nil)
+	g.UpdateStrategyMap([]util.SchedulingStrategy{{PID: 42, Priority: 2, ExecutionTime: 200}})
+
+	changed, removed := g.GetChangedStrategies()
+	if len(removed) != 0 {
+		t.Errorf("removed=%v; want empty (42 must not be deleted)", removed)
+	}
+	if len(changed) != 1 || changed[0].PID != 42 || changed[0].ExecutionTime != 200 {
+		t.Errorf("changed=%v; want a single 42 with ExecutionTime 200", changed)
+	}
+}
+
+// TestGetChangedStrategiesCoalescesAddThenRemove verifies a PID added then
+// removed before a drain nets to nothing.
+func TestGetChangedStrategiesCoalescesAddThenRemove(t *testing.T) {
+	g := NewGthulhuPlugin(0, 0)
+	g.UpdateStrategyMap([]util.SchedulingStrategy{{PID: 7, Priority: 1}})
+	g.UpdateStrategyMap(nil)
+	if changed, removed := g.GetChangedStrategies(); len(changed) != 0 || len(removed) != 0 {
+		t.Errorf("changed=%d removed=%d; want 0,0 (add then remove nets to nothing)", len(changed), len(removed))
+	}
+}
+
 // TestGetChangedStrategiesConcurrent drains the change queues from several
 // goroutines at once so the race detector guards the write-lock fix.
 func TestGetChangedStrategiesConcurrent(t *testing.T) {
