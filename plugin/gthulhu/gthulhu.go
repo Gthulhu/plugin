@@ -66,12 +66,12 @@ type GthulhuPlugin struct {
 	// Global vruntime
 	minVruntime uint64
 
-	// Strategy map for PID-based scheduling strategies
-	oldStrategyMap  map[int32]util.SchedulingStrategy
-	strategyMap     map[int32]util.SchedulingStrategy
-	newStrategy     []util.SchedulingStrategy
-	removedStrategy []util.SchedulingStrategy
-	strategyMu      sync.RWMutex
+	// strategyMap is the latest desired strategy set (keyed by task id);
+	// appliedStrategyMap is the set last handed to the scheduler, so
+	// GetChangedStrategies can diff the two into a coalesced changed/removed set.
+	strategyMap        map[int32]util.SchedulingStrategy
+	appliedStrategyMap map[int32]util.SchedulingStrategy
+	strategyMu         sync.RWMutex
 
 	// JWT client for API authentication
 	jwtClient *JWTClient
@@ -82,12 +82,13 @@ type GthulhuPlugin struct {
 
 func NewGthulhuPlugin(sliceNsDefault, sliceNsMin uint64) *GthulhuPlugin {
 	plugin := &GthulhuPlugin{
-		sliceNsDefault: 5000 * 1000, // 5ms (default)
-		sliceNsMin:     500 * 1000,  // 0.5ms (default)
-		taskPool:       make([]Task, taskPoolSize),
-		taskPoolCount:  0,
-		minVruntime:    0,
-		strategyMap:    make(map[int32]util.SchedulingStrategy),
+		sliceNsDefault:     5000 * 1000, // 5ms (default)
+		sliceNsMin:         500 * 1000,  // 0.5ms (default)
+		taskPool:           make([]Task, taskPoolSize),
+		taskPoolCount:      0,
+		minVruntime:        0,
+		strategyMap:        make(map[int32]util.SchedulingStrategy),
+		appliedStrategyMap: make(map[int32]util.SchedulingStrategy),
 	}
 
 	// Override defaults if provided
@@ -130,7 +131,7 @@ func (g *GthulhuPlugin) SelectCPU(s reg.Sched, t *models.QueuedTask) (error, int
 }
 
 func (g *GthulhuPlugin) DetermineTimeSlice(s reg.Sched, t *models.QueuedTask) uint64 {
-	return g.getTaskExecutionTime(t.Pid)
+	return g.getTaskExecutionTime(t)
 }
 
 func (g *GthulhuPlugin) GetPoolCount() uint64 {
@@ -281,31 +282,47 @@ func lessQueuedTask(a, b *Task) bool {
 	return a.QueuedTask.Pid < b.QueuedTask.Pid
 }
 
-// applySchedulingStrategy applies scheduling strategies to a task
+// applySchedulingStrategy gives a task minimum vtime when a matching strategy
+// boosts it (Priority > 0), and reports whether it was boosted. A strategy that
+// only sets a custom time slice (Priority == 0) must not jump the run queue, so
+// it reports false here; getTaskExecutionTime still supplies its slice.
 func (g *GthulhuPlugin) applySchedulingStrategy(task *models.QueuedTask) bool {
-	g.strategyMu.RLock()
-	strategy, exists := g.strategyMap[task.Tgid]
-	g.strategyMu.RUnlock()
-	if exists {
-		// Apply strategy
-		if strategy.Priority > 0 {
-			// Priority tasks get minimum vtime
-			task.Vtime = 0
-		}
-		return true
+	strategy, exists := g.lookupTaskStrategy(task)
+	if !exists || strategy.Priority <= 0 {
+		return false
 	}
-	return false
+	task.Vtime = 0
+	return true
 }
 
-// getTaskExecutionTime returns the custom execution time for a task if defined
-func (g *GthulhuPlugin) getTaskExecutionTime(pid int32) uint64 {
-	g.strategyMu.RLock()
-	strategy, exists := g.strategyMap[pid]
-	g.strategyMu.RUnlock()
+// getTaskExecutionTime returns the custom time slice for a task, or 0 when no
+// matching strategy defines one.
+func (g *GthulhuPlugin) getTaskExecutionTime(task *models.QueuedTask) uint64 {
+	strategy, exists := g.lookupTaskStrategy(task)
 	if exists && strategy.ExecutionTime > 0 {
 		return strategy.ExecutionTime
 	}
 	return 0
+}
+
+// lookupTaskStrategy returns the strategy for a task, preferring an exact
+// thread (TID) match over a thread-group (TGID) match. Node policies key by
+// TID, so a thread-specific rule wins; Pod policies key by the group leader's
+// PID, so every thread of the group still resolves through the TGID fallback.
+// Priority and time-slice must share this lookup, or one strategy would act
+// differently between the two paths.
+func (g *GthulhuPlugin) lookupTaskStrategy(task *models.QueuedTask) (util.SchedulingStrategy, bool) {
+	g.strategyMu.RLock()
+	defer g.strategyMu.RUnlock()
+	if strategy, ok := g.strategyMap[task.Pid]; ok {
+		return strategy, true
+	}
+	if task.Tgid != task.Pid {
+		if strategy, ok := g.strategyMap[task.Tgid]; ok {
+			return strategy, true
+		}
+	}
+	return util.SchedulingStrategy{}, false
 }
 
 // InitJWTClient initializes the JWT client for API authentication
@@ -365,59 +382,46 @@ func (g *GthulhuPlugin) FetchSchedulingStrategies(apiUrl string) ([]util.Schedul
 	return fetchSchedulingStrategies(g.jwtClient, apiUrl)
 }
 
-// UpdateStrategyMap updates the strategy map from a slice of strategies
+// UpdateStrategyMap replaces the desired strategy set. The changed/removed diff
+// is computed later in GetChangedStrategies against the last applied set, so
+// intermediate churn (e.g. a strategy removed then re-added before the next
+// drain) coalesces to the correct final state instead of a stale event stream.
 func (g *GthulhuPlugin) UpdateStrategyMap(strategies []util.SchedulingStrategy) {
-	// Create a new map to avoid concurrent access issues
 	newMap := make(map[int32]util.SchedulingStrategy)
-
 	for _, strategy := range strategies {
 		newMap[int32(strategy.PID)] = strategy
 	}
-
-	// Replace the old map with the new one
 	g.strategyMu.Lock()
-	g.oldStrategyMap = g.strategyMap
 	g.strategyMap = newMap
-	changed, removed := g.caculateChangedStrategies()
-	g.newStrategy = append(g.newStrategy, changed...)
-	g.removedStrategy = append(g.removedStrategy, removed...)
 	g.strategyMu.Unlock()
 }
 
-// Campare g.oldStrategyMap and g.strategyMap and return the list of SchedulingStrategy that have changed strategies
-func (g *GthulhuPlugin) caculateChangedStrategies() ([]util.SchedulingStrategy, []util.SchedulingStrategy) {
-	changed := []util.SchedulingStrategy{}
-	removed := []util.SchedulingStrategy{}
-
-	// Check for removed strategies
-	for pid, oldStrategy := range g.oldStrategyMap {
-		_, exists := g.strategyMap[pid]
-		if !exists {
-			removed = append(removed, oldStrategy)
-		}
-	}
-
-	// Check for changed or new strategies
-	for pid, newStrategy := range g.strategyMap {
-		oldStrategy, exists := g.oldStrategyMap[pid]
-		if !exists || oldStrategy != newStrategy {
-			changed = append(changed, newStrategy)
-		}
-	}
-	return changed, removed
-}
-
-// Campare g.oldStrategyMap and g.strategyMap and return the list of SchedulingStrategy that have changed strategies
+// GetChangedStrategies returns the strategies to apply (changed or new) and to
+// remove so the scheduler's applied set matches the current desired set, then
+// records the current set as applied. Diffing against the last applied set (not
+// a running event queue) guarantees a strategy is never in both lists, so a
+// remove-then-re-add between drains is not mistaken for a deletion.
 func (g *GthulhuPlugin) GetChangedStrategies() ([]util.SchedulingStrategy, []util.SchedulingStrategy) {
 	changed := []util.SchedulingStrategy{}
 	removed := []util.SchedulingStrategy{}
-	g.strategyMu.RLock()
-	defer g.strategyMu.RUnlock()
 
-	// copy g.newStrategy to changed and clear g.newStrategy
-	changed = append(changed, g.newStrategy...)
-	removed = append(removed, g.removedStrategy...)
-	g.newStrategy = []util.SchedulingStrategy{}
-	g.removedStrategy = []util.SchedulingStrategy{}
+	g.strategyMu.Lock()
+	defer g.strategyMu.Unlock()
+
+	for pid, strategy := range g.strategyMap {
+		if applied, ok := g.appliedStrategyMap[pid]; !ok || applied != strategy {
+			changed = append(changed, strategy)
+		}
+	}
+	for pid, applied := range g.appliedStrategyMap {
+		if _, ok := g.strategyMap[pid]; !ok {
+			removed = append(removed, applied)
+		}
+	}
+
+	g.appliedStrategyMap = make(map[int32]util.SchedulingStrategy, len(g.strategyMap))
+	for pid, strategy := range g.strategyMap {
+		g.appliedStrategyMap[pid] = strategy
+	}
 	return changed, removed
 }
