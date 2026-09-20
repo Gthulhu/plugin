@@ -3,6 +3,7 @@ package gthulhu
 import (
 	"context"
 	"log"
+	"maps"
 	"sync"
 	"time"
 
@@ -66,9 +67,8 @@ type GthulhuPlugin struct {
 	// Global vruntime
 	minVruntime uint64
 
-	// strategyMap is the latest desired strategy set (keyed by task id);
-	// appliedStrategyMap is the set last handed to the scheduler, so
-	// GetChangedStrategies can diff the two into a coalesced changed/removed set.
+	// strategyMap is the desired set; appliedStrategyMap is the last set handed
+	// to the scheduler. GetChangedStrategies diffs them into changed/removed.
 	strategyMap        map[int32]util.SchedulingStrategy
 	appliedStrategyMap map[int32]util.SchedulingStrategy
 	strategyMu         sync.RWMutex
@@ -419,9 +419,6 @@ func (g *GthulhuPlugin) GetChangedStrategies() ([]util.SchedulingStrategy, []uti
 		}
 	}
 
-	g.appliedStrategyMap = make(map[int32]util.SchedulingStrategy, len(g.strategyMap))
-	for pid, strategy := range g.strategyMap {
-		g.appliedStrategyMap[pid] = strategy
-	}
+	g.appliedStrategyMap = maps.Clone(g.strategyMap)
 	return changed, removed
 }

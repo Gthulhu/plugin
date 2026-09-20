@@ -293,11 +293,11 @@ func TestGetChangedStrategiesConcurrent(t *testing.T) {
 	g.UpdateStrategyMap([]util.SchedulingStrategy{{PID: 1, Priority: 1}})
 
 	var wg sync.WaitGroup
-	for i := 0; i < 4; i++ {
+	for range 4 {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			for j := 0; j < 500; j++ {
+			for range 500 {
 				g.GetChangedStrategies()
 			}
 		}()
